@@ -1,0 +1,38 @@
+可视化实现具体步骤
+Sales界面可视化实现
+
+文件准备：
+
+将数据文件存放至与rate相同的文件夹中，修改文件路径以适应该文件夹位置。
+
+运行rate脚本，添加汇率信息。
+
+清洗数据：
+
+将添加完汇率的表格放入Dash Database文件夹。
+
+修改路径和文件名，运行Sales clean脚本，得到清洗后的表格。此操作会覆盖原始表格。
+
+Inventory界面可视化实现
+
+创建新的月份Sheet：
+
+在Excel中创建新的月份Sheet表。
+
+生成Pad表：
+
+修改新的文件路径，运行Dash_Pads脚本，生成Pad表（默认输出路径为Dash Database）。
+
+生成Disc表：
+
+修改新的文件路径，运行clean_Disc脚本，生成Disc表。
+
+制作Balance表：
+
+在Excel中手动制作Balance表。
+
+汇总与运行：
+
+将所有表格（包括Inventory、Pads、Disc、Balance以及所有Sales表）放入同一个文件夹（Dash Database）。
+
+运行Dash脚本，选择并加载所需的表格进行可视化。
