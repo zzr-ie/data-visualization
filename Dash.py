@@ -564,6 +564,44 @@ def display_main_content(contents, filenames, img_style):
 def handle_upload(contents, filenames):
     global df_store
 
+@app.callback(
+    Output('date-selectors', 'children'),
+    Input('upload-data', 'contents'),
+    State('upload-data', 'filename')
+)
+def handle_upload(contents, filenames):
+    if contents is None or df_store.empty:
+        return None
+
+    # 数据清洗：确保 'year_month' 列被格式化为 '%Y-%m'
+    df_store['year_month'] = pd.to_datetime(df_store['year_month'], errors='coerce').dt.strftime('%Y-%m')
+
+    # 确保 'year_month' 列没有空值
+    date_options = sorted(df_store['year_month'].dropna().unique())
+
+    if not date_options:
+        return None
+
+    print(f"Date options: {date_options}")  # 打印日期选项
+
+    return html.Div([
+        dcc.Dropdown(
+            id={'type': 'start-date', 'index': 'default'},
+            options=[{'label': d, 'value': d} for d in date_options],
+            value=date_options[0],  # 默认选择第一个日期
+            className='start-date-default',
+            placeholder="Start"
+        ),
+        dcc.Dropdown(
+            id={'type': 'end-date', 'index': 'default'},
+            options=[{'label': d, 'value': d} for d in date_options],
+            value=date_options[-1],  # 默认选择最后一个日期
+            className='end-date-default',
+            placeholder="End"
+        )
+    ])
+
+    
     if contents is None or df_store.empty:
         return None
 
@@ -2271,3 +2309,4 @@ def update_pie_figure(selected_month, selected_category):
 # ========== Run ==========
 if __name__ == '__main__':
     app.run(debug=True)
+
