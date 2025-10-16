@@ -1,0 +1,255 @@
+import dash
+from dash import dcc, html, Output, Input, State, ctx, ALL
+import dash_bootstrap_components as dbc
+import pandas as pd
+import io
+import base64
+import plotly.express as px
+import uuid
+import plotly.graph_objects as go
+from dash import MATCH
+import math
+import numpy as np
+from millify import millify
+
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server
+
+# Helper function to get evenly spaced labels
+def get_evenly_spaced_labels(series, count=6):
+    n = len(series)
+    if n <= count:
+        indices = list(range(n))
+    else:
+        step = n / count
+        indices = [int(round(i * step)) for i in range(count)]
+        indices = sorted(set(min(i, n - 1) for i in indices))
+    labels = []
+    for i, val in enumerate(series):
+        if i in indices:
+            if val < 1000:
+                labels.append(f"{val:,.0f}")
+            else:
+                labels.append(millify(val, precision=0))
+        else:
+            labels.append("")
+    return labels
+
+# Helper function for calculating MoM (Month over Month)
+def calculate_mom(current, previous):
+    if previous in [0, None] or pd.isna(previous):
+        return None
+    return (current - previous) / previous
+
+# Sales page layout
+def sales_page_layout():
+    return html.Div([
+        # Sales content here...
+    ])
+
+# Cost page layout
+def cost_page_layout():
+    if inventory_df.empty:
+        return html.Div("❌ Inventory 数据为空")
+    inventory_df['year_month'] = pd.to_datetime(inventory_df['year_month'], errors='coerce').dt.strftime('%Y-%m')
+    all_months = sorted(inventory_df['year_month'].dropna().unique())
+    month_options = [{"label": m, "value": m} for m in all_months]
+
+    return html.Div([
+        # Cost content here...
+    ])
+
+# Overview section where we will merge Git Disc and Git Pad
+overview_card = html.Div(
+    className="inv-card-container inventory-overview",
+    children=[
+        html.Div("Inventory Balance Overview", className="card-header"),
+        # —— 第一行：Disc/Pads/Moto/Brake 都显示 MoM —— #
+        html.Div(
+            style={"display": "flex", "gap": "12px", "marginTop": "-10px", "paddingLeft": "8px", "paddingRight": "8px"},
+            children=[
+                value_mom_card("Overall", total_amt, mom(total_amt, total_amt_prev)),
+                qty_value_card("Disc", disc_qty, disc_amt, mom(disc_amt, disc_amt_prev)),
+                qty_value_card("Pads", pads_qty, pads_amt, mom(pads_amt, pads_amt_prev)),
+                qty_value_card("Moto", moto_qty, moto_amt, mom(moto_amt, moto_amt_prev)),
+                qty_value_card("Fluid", brake_qty, brake_amt, mom(brake_amt, brake_amt_prev)),
+                value_mom_card("GIT Combined", git_combined, mom(git_combined, git_combined_prev))  # 合并后的 Git
+            ]
+        )
+    ]
+)
+
+# Update Git Disc and Git Pad data
+git_combined = git_disc + git_pads  # 合并 Git Disc 和 Git Pad 的数值
+git_combined_prev = git_disc_prev + git_pads_prev  # 合并之前的数值
+
+# Layout of the app
+app.layout = html.Div([
+    # Sidebar content
+    html.Div(
+        id='sidebar-background-color',
+        style={
+            'position': 'fixed',
+            'top': '0',
+            'left': '0',
+            'width': '400px',
+            'height': '100vh',
+            'backgroundColor': '#D3D3D3',
+            'zIndex': '0',
+            'display': 'block',
+            'overflowY': 'auto'
+        }
+    ),
+
+    # Main content, disabling page scroll
+    html.Div(
+        style={
+            'minHeight': '100vh',
+            'position': 'relative',
+            'overflow': 'hidden'  # Blocking main page scroll
+        },
+        children=[
+            dcc.Upload(
+                id='upload-data',
+                children=html.Button(
+                    html.Img(src=app.get_asset_url("Logo.png"), className='upload-logo'),
+                    style={
+                        'border': 'none',
+                        'background': 'none',
+                        'cursor': 'pointer',
+                        'padding': '0',
+                        'position': 'absolute',
+                        'top': '-30px',
+                        'left': '35px'
+                    }
+                ),
+                multiple=True
+            ),
+            html.Img(
+                id='background-image',
+                src='assets/Logo2.jpg',
+                style={
+                    'position': 'absolute',
+                    'top': '50%',
+                    'left': '50%',
+                    'transform': 'translate(-50%, -50%)',
+                    'width': '60%',
+                    'border-radius': '20px',
+                    'zIndex': '0'
+                }
+            ),
+            html.Div(id='main-content', style={'position': 'relative', 'zIndex': '1'}),
+            dbc.Offcanvas(
+                id="sidebar",
+                is_open=False,
+                children=[html.Div(id='sidebar-content')],
+                style={'background-color': 'rgba(0,0,0,0.4)', 'color': 'White'}
+            ),
+            dcc.Store(id='ebit-position-store', data='default'),
+            dcc.Store(id='filter-count-store', data=0)
+        ]
+    )
+])
+
+# Handle Data Upload
+@app.callback(
+    [Output('main-content', 'children'),
+     Output('sidebar-content', 'children'),
+     Output('background-image', 'style')],
+    Input('upload-data', 'contents'),
+    State('upload-data', 'filename'),
+    State('background-image', 'style')
+)
+def display_main_content(contents, filenames, img_style):
+    global df_store, inventory_df, balance_df, pads_df, disc_df
+
+    if contents is None:
+        img_style['display'] = 'block'
+        return None, None, img_style
+
+    img_style['display'] = 'none'
+
+    contents = contents if isinstance(contents, list) else [contents]
+    filenames = filenames if isinstance(filenames, list) else [filenames]
+
+    all_dfs = []
+    inventory_df = pd.DataFrame()
+
+    for content, filename in zip(contents, filenames):
+        content_type, content_string = content.split(',')
+        decoded = base64.b64decode(content_string)
+
+        if 'inventory' in filename.lower():
+            xls = pd.read_excel(io.BytesIO(decoded), sheet_name=None)
+            df = pd.concat(xls.values(), ignore_index=True)
+
+            inventory_df = df
+            if 'year_month' in inventory_df.columns:
+                inventory_df['year_month'] = pd.to_datetime(
+                    inventory_df['year_month'], errors='coerce'
+                ).dt.strftime('%Y-%m')
+            if 'Item number' in inventory_df.columns:
+                inventory_df['Item number'] = inventory_df['Item number'].astype(str).str.upper().str.strip()
+        elif 'balance' in filename.lower():
+            global balance_df
+
+            xls = pd.read_excel(io.BytesIO(decoded), sheet_name=None)
+            df = pd.concat(xls.values(), ignore_index=True)
+
+            balance_df = df
+
+            if 'year_month' in balance_df.columns:
+                balance_df['year_month'] = pd.to_datetime(
+                    balance_df['year_month'], errors='coerce'
+                ).dt.strftime('%Y-%m')
+
+        elif 'pads' in filename.lower():
+            global pads_df
+
+            xls_sheets = pd.read_excel(io.BytesIO(decoded), sheet_name=None)
+
+            pads_df = pd.concat(xls_sheets.values(), ignore_index=True)
+
+
+        elif 'disc' in filename.lower():
+            global disc_df
+
+            xls_sheets = pd.read_excel(io.BytesIO(decoded), sheet_name=None)
+
+            disc_df = pd.concat(xls_sheets.values(), ignore_index=True)
+
+        else:
+            df = pd.read_excel(io.BytesIO(decoded))
+            df_cleaned = clean_data(df)
+            if 'Country' in df_cleaned.columns:
+                df_cleaned['Country'] = df_cleaned['Country'].astype(str).str.upper()
+            if 'Product Type' in df_cleaned.columns:
+                df_cleaned['Product Type'] = df_cleaned['Product Type'].astype(str).str.upper()
+
+            if 'Item - Item Group Full Name' in df_cleaned.columns:
+                df_cleaned['Item - Item Group Full Name'] = df_cleaned['Item - Item Group Full Name'].astype(
+                    str).str.upper()
+
+            if 'Customer - Name' in df_cleaned.columns:
+                df_cleaned['Customer - Name'] = df_cleaned['Customer - Name'].astype(str).str.upper()
+            all_dfs.append(df_cleaned)
+
+    df_store = pd.concat(all_dfs, ignore_index=True)
+
+    year_options = sorted(df_store['Date'].apply(lambda x: x.split('-')[0]).unique())
+    sidebar_content = [
+        html.Div(id='dynamic-bubble-filters')
+    ]
+    main_content = html.Div([
+        html.Div([
+            html.Button("Sales", id='sales-btn', n_clicks=0, className='tab-button'),
+            html.Button("Inventory", id='cost-btn', n_clicks=0, className='tab-button')
+        ]),
+        html.Div([
+            html.Div(id="sales-page", children=sales_page_layout(), style={"display": "block"}),
+            html.Div(id="cost-page", children=cost_page_layout(), style={"display": "none"}),
+        ])
+    ])
+    return main_content, sidebar_content, img_style
+
+# Rest of the code continues...
