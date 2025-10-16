@@ -234,7 +234,7 @@ def cost_page_layout():
             dcc.Dropdown(
                 id="inv-start-date",
                 options=[{"label": d, "value": d} for d in all_months],
-                value=all_months[0] if all_months else None
+                value=all_months[0] if all_months else None,
             )
         ], id="start-date-container", className="dropdown-white-rounded",
             style={"position": "absolute", "top": "120px", "left": "10px"}),
@@ -422,13 +422,16 @@ app.layout = html.Div([
 
 # ========== Data Cleaning ========== #
 def clean_data(df):
-    df.columns = df.columns.str.strip()
+    #检查数据清洗
+    print(f"original columns: {df.columns}")#打印原始名
+    #df.columns = df.columns.str.strip()
     if 'Year' in df.columns and 'Month' in df.columns:
         df['Date'] = pd.to_datetime(
             df['Year'].astype(str) + '-' + df['Month'].astype(str).apply(lambda x: x.zfill(2)),
             format='%Y-%m'
         ).dt.strftime('%Y-%m')
         df = df.drop(columns=['Year', 'Month'])
+        print(f"cleaned cloumns:{df.columns}")#打印清洗后列名
     string_cols = ['Region', 'Sub Region', 'Country', 'Product Type',
                    'Item - Item Group Full Name', 'Customer - Name', 'Item - Code']
     for col in df.columns:
@@ -564,47 +567,35 @@ def display_main_content(contents, filenames, img_style):
 def handle_upload(contents, filenames):
     global df_store
 
-@app.callback(
-    Output('date-selectors', 'children'),
-    Input('upload-data', 'contents'),
-    State('upload-data', 'filename')
-)
-def handle_upload(contents, filenames):
     if contents is None or df_store.empty:
         return None
-
-    # 数据清洗：确保 'year_month' 列被格式化为 '%Y-%m'
-    df_store['year_month'] = pd.to_datetime(df_store['year_month'], errors='coerce').dt.strftime('%Y-%m')
-
-    # 确保 'year_month' 列没有空值
-    date_options = sorted(df_store['year_month'].dropna().unique())
-
-    if not date_options:
-        return None
-
-    print(f"Date options: {date_options}")  # 打印日期选项
-
-    return html.Div([
-        dcc.Dropdown(
-            id={'type': 'start-date', 'index': 'default'},
-            options=[{'label': d, 'value': d} for d in date_options],
-            value=date_options[0],  # 默认选择第一个日期
-            className='start-date-default',
-            placeholder="Start"
-        ),
-        dcc.Dropdown(
-            id={'type': 'end-date', 'index': 'default'},
-            options=[{'label': d, 'value': d} for d in date_options],
-            value=date_options[-1],  # 默认选择最后一个日期
-            className='end-date-default',
-            placeholder="End"
-        )
-    ])
-
-    
-    if contents is None or df_store.empty:
-        return None
-
+    #     # 数据清洗：确保 'year_month' 列被格式化为 '%Y-%m'
+    # df_store['year_month'] = pd.to_datetime(df_store['year_month'], errors='coerce').dt.strftime('%Y-%m')
+    #
+    # # 确保 'year_month' 列没有空值
+    # date_options = sorted(df_store['year_month'].dropna().unique())
+    #
+    # if not date_options:
+    #     return None
+    #
+    # print(f"Date options: {date_options}")  # 打印日期选项
+    #
+    # return html.Div([
+    #     dcc.Dropdown(
+    #         id={'type': 'start-date', 'index': 'default'},
+    #         options=[{'label': d, 'value': d} for d in date_options],
+    #         value=date_options[0],  # 默认选择第一个日期
+    #         className='start-date-default',
+    #         placeholder="Start"
+    #     ),
+    #     dcc.Dropdown(
+    #         id={'type': 'end-date', 'index': 'default'},
+    #         options=[{'label': d, 'value': d} for d in date_options],
+    #         value=date_options[-1],  # 默认选择最后一个日期
+    #         className='end-date-default',
+    #         placeholder="End"
+    #     )
+    # ])
 
     date_options = sorted(df_store['Date'].unique())
     region_options = ['ALL Region'] + sorted(df_store['Region'].dropna().unique())
@@ -1715,14 +1706,24 @@ def update_inventory_cards(selected_month, pie_source):
         bal_curr.get("1400-INVENTORY", pd.Series([0])).sum(),
         bal_prev.get("1400-INVENTORY", pd.Series([0])).sum()
     )
-    git_disc,       git_disc_prev   = (
-        bal_curr.get("102011101 - 在途物资—产成品 刹车盘", pd.Series([0])).sum(),
-        bal_prev.get("102011101 - 在途物资—产成品 刹车盘", pd.Series([0])).sum()
+
+    git_disc, git_disc_prev = (
+         bal_curr.get("102011101 - 在途物资—产成品 刹车盘", pd.Series([0])).sum(),
+         bal_prev.get("102011101 - 在途物资—产成品 刹车盘", pd.Series([0])).sum()
+     )
+    git_pads, git_pads_prev = (
+         bal_curr.get("102011102 - 在途物资—产成品 刹车片", pd.Series([0])).sum(),
+         bal_prev.get("102011102 - 在途物资—产成品 刹车片", pd.Series([0])).sum()
     )
-    git_pads,       git_pads_prev   = (
-        bal_curr.get("102011102 - 在途物资—产成品 刹车片", pd.Series([0])).sum(),
-        bal_prev.get("102011102 - 在途物资—产成品 刹车片", pd.Series([0])).sum()
-    )
+
+    # # 合并 GIT Disc 和 GIT Pads 数据
+    # git_disc_and_pads, git_disc_and_pads_prev = (
+    #      bal_curr.get("102011101 - 在途物资—产成品 刹车盘", pd.Series([0])).sum() +
+    #      bal_curr.get("102011102 - 在途物资—产成品 刹车片", pd.Series([0])).sum(),
+    #      bal_prev.get("102011101 - 在途物资—产成品 刹车盘", pd.Series([0])).sum() +
+    #      bal_prev.get("102011102 - 在途物资—产成品 刹车片", pd.Series([0])).sum()
+    #  )
+
 
     # Disc / Pads / Brake / Moto 数量 & 金额
     disc_qty,      disc_qty_prev   = sum_curr_prev("On-hand", ("08","09","14"), df_curr, df_prev)
@@ -1861,12 +1862,11 @@ def update_inventory_cards(selected_month, pie_source):
                        "marginTop": "-10px", "paddingLeft": "8px", "paddingRight": "8px"},
                 children=[
                     value_mom_card("Overall", total_amt, mom(total_amt, total_amt_prev)),
+                    # 合并 GIT Disc 和 GIT Pads
                     qty_value_card("Disc", disc_qty, disc_amt, mom(disc_amt, disc_amt_prev)),
                     qty_value_card("Pads", pads_qty, pads_amt, mom(pads_amt, pads_amt_prev)),
                     qty_value_card("Moto", moto_qty, moto_amt, mom(moto_amt, moto_amt_prev)),
                     qty_value_card("Fluid", brake_qty, brake_amt, mom(brake_amt, brake_amt_prev)),
-                    value_mom_card("GIT Disc", git_disc, mom(git_disc, git_disc_prev)),
-                    value_mom_card("GIT Pads", git_pads, mom(git_pads, git_pads_prev)),
                 ]
             )
         ]
