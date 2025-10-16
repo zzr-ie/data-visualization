@@ -1,0 +1,705 @@
+@import url('https://fonts.googleapis.com/css2?family=Bahnschrift:wght@500&display=swap');
+
+/* ==================== 通用样式 ==================== */
+body {
+    font-family: 'Bahnschrift', sans-serif;
+    color: white;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    margin: 0;
+    padding: 0;
+}
+
+/* ==================== 上传 Logo ==================== */
+.upload-logo {
+    width: 200px;
+    height: auto;
+    transition: transform 0.2s;
+}
+.upload-logo:hover {
+    transform: scale(1.05);
+}
+
+/* ==================== 动态筛选器组 ==================== */
+.transparent-dropdown {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ==================== 位置布局 ==================== */
+.start-date-default,
+.end-date-default{
+    position: absolute;
+    top: 170px;
+    text-align: center;
+    color: Black;
+}
+#region-container{
+    position: absolute;
+    top: 200px;
+    text-align: center;
+    color: Black;
+}
+#country-container{
+    position: absolute;
+    top: 240px;
+    text-align: center;
+    color: Black;
+
+}
+#product-type-container{
+    position: absolute;
+    top: 280px;
+    text-align: center;
+    color: Black;
+
+}
+#item-group-container{
+    position: absolute;
+    top: 320px;
+    text-align: center;
+    color: Black;
+
+}
+#customer-name-container{
+    position: absolute;
+    top: 360px;
+    text-align: center;
+    color: Black;
+
+}
+#item-code-container{
+    position: absolute;
+    top: 400px;
+    text-align: center;
+    color: Black;
+
+}
+.start-date-default { left: 10px; }
+.end-date-default { left: 170px; }
+#region-container { left: 10px; }
+#country-container { left: 10px;}
+#product-type-container { left: 10px;}
+#item-group-container { left: 10px;}
+#customer-name-container { left: 10px;}
+#item-code-container { left: 10px;}
+/* ==================== 公共下拉框样式 ==================== */
+.start-date-default .Select-control,
+.end-date-default .Select-control{
+    background: white !important;
+    border: 1px solid white !important;
+    border-radius: 8px !important;
+    width: 100px !important;
+    height: 25px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.start-date-dynamic .Select-control,
+.end-date-dynamic .Select-control {
+    background: white !important;
+    border: 1px solid white !important;
+    border-radius: 8px !important;
+    width: 100px !important;
+    height: 25px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.dynamic-filter-group .Select-control {
+    background: white !important;
+    border: 1px solid white !important;
+    border-radius: 8px !important;
+    width: 260px !important;
+    height: 30px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.transparent-dropdown .Select-control,
+.transparent-dropdown .Select-menu-outer,
+.transparent-dropdown .Select-value,
+.transparent-dropdown .Select-placeholder,
+.transparent-dropdown .Select-input {
+    color: black !important;
+}
+.Select-menu-outer {
+    position: absolute !important;
+    top: auto !important;
+    bottom: 100% !important;
+    z-index: 10 !important;
+}
+#item-group-container .Select-control,
+#customer-name-container .Select-control,
+#region-container .Select-control,
+#country-container .Select-control,
+#product-type-container .Select-control,
+#item-code-container .Select-control
+{
+    background: white !important;
+    border: 1px solid white !important;
+    border-radius: 8px !important;
+    width: 260px !important;
+    height: 30px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+/* ==================== Start & End Date 文字样式 ==================== */
+.start-date-default .Select-value-label,
+.end-date-default .Select-value-label {
+    position: relative;
+    top: -5px;
+    left:-10px;
+    color: Black !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    font-size: 16px !important;
+    text-align: center !important;
+}
+.start-date-dynamic .Select-value-label,
+.end-date-dynamic .Select-value-label {
+    position: relative;
+    top: -5px;
+    left:-10px;
+    color: Black !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    font-size: 16px !important;
+    text-align: center !important;
+}
+.start-date-default .Select-placeholder,
+.end-date-default .Select-placeholder {
+    position: relative;
+    top: 18px;
+    color: Black !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    font-size: 16px !important;
+    text-align: center !important;
+}
+.start-date-dynamic .Select-placeholder,
+.end-date-dynamic .Select-placeholder {
+    position: relative;
+    top: 18px;
+    color: Black !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    font-size: 16px !important;
+    text-align: center !important;
+}
+
+/* ==================== 其他容器（Region/Country/Product）文字样式 ==================== */
+#customer-name-container .Select-value-label,
+#item-group-container .Select-value-label,
+#region-container .Select-value-label,
+#country-container .Select-value-label,
+#product-type-container .Select-value-label{
+    position: relative;
+    top: -2px;
+    color: Black !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    font-size: 14px !important;
+    text-align: center !important;
+}
+#item-group-container .Select-placeholder,
+#customer-name-container .Select-placeholder,
+#region-container .Select-placeholder,
+#country-container .Select-placeholder,
+#product-type-container .Select-placeholder{
+    position: relative;
+    top: 18px;
+    color: Black !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    font-size: 14px !important;
+    text-align: center !important;
+}
+
+/* ==================== 清除按钮（X） & 箭头 ==================== */
+.Select-clear-zone,
+.Select-arrow-zone {
+    position: absolute !important;
+    right: 10px !important;
+    top: 47% !important;
+    transform: translateY(-50%);
+    z-index: 10;
+    color: Black !important;
+}
+.Select-clear {
+    color: Black !important;
+    font-size: 16px !important;
+    cursor: pointer;
+}
+.Select-arrow-zone {
+    right: -8px !important;
+}
+/* 改为向上的三角 ▼→▲（默认关闭状态显示） */
+.Select-arrow {
+    border-top: none;
+    border-bottom: 5px solid black;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    transform: translateY(-50%)
+}
+
+/* 打开下拉时变回向下 ▼（可选，不加也可以） */
+.is-open > .Select-control .Select-arrow {
+    border-bottom: none;
+    border-top: 5px solid black;
+    transform: translateY(-0%)
+}
+
+/* ==================== 多选标签样式（Region灰色背景） ==================== */
+#customer-name-container .Select-multi-value,
+#item-group-container .Select-multi-value,
+#region-container .Select-multi-value,
+#country-container .Select-multi-value,
+#product-type-container .Select-multi-value {
+    background: black !important;
+    border: 1px solid white !important;
+    border-radius: 5px !important;
+    color: white !important;
+    font-weight: bold;
+    text-align: center;
+    padding: 4px 8px;
+}
+
+/* ==================== Dropdown 菜单样式 ==================== */
+[class*='menu'] {
+    background: White !important;
+    border: 1px solid white !important;
+    border-radius: 8px !important;
+}
+.Select-option {
+    color: black !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    font-size: 16px !important;
+    background-color: white !important;
+}
+
+
+[class*='option']:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ==================== 图表位置 ==================== */
+#total-sales-line { margin-left: -20px; margin-top: -90px;}
+#sales-qua-line { margin-left: -20px;  margin-top: -90px;}
+#unit-price-line { margin-left: -20px;  margin-top: -90px;}
+#ebit-percent-line { margin-left: -10px; margin-top: -90px;}
+
+/* ==================== 动态 Filter 容器 ==================== */
+#add-filter {
+    line-height: 10px;  /* 小于30会让文字略偏上 */
+}
+.delete-button {
+    position: relative;
+    left: -5px; /* 向左移动 5px，可调 */
+}
+
+
+/* ==================== Aggregation & Sidebar ==================== */
+.icon-button {
+    background-color: white;
+    border: 1px solid #ccc;
+    color: #333;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    height: 28px;
+    line-height: 1;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+
+/* ==================== 卡片样式 ==================== */
+/* ✅ 通用卡片样式，包括 inventory 和 sales 统一风格 */
+.inv-card-container,
+.card-container{
+    background: white;
+    border: 1px solid white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    margin: 20px;
+    padding: 0px;
+    transition: transform 0.3s ease;
+    margin-top: -13px;
+}
+
+.inv-card-container:hover,
+.card-container:hover {
+    transform: scale(1.03);
+}
+
+.inv-card-container .card-header,
+.card-container .card-header {
+    font-family: 'Bahnschrift', sans-serif;
+    font-size: 18px;
+    color: black;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 5px;
+    text-align: center;
+    border-bottom: 1px solid white;
+    box-sizing: border-box;
+}
+
+#total-sales-card { position: absolute; left: 1090px; z-index: 2; }
+#sales-qua-card { position: absolute; left: 680px; z-index: 2; }
+#unit-price-card { position: absolute; left: 270px; z-index: 2; }
+
+/* ==================== Year & Bubble Filter Containers ==================== */
+#year-filter-container { position: absolute; top: 300px; left: 240px; }
+#year-dropdown .Select-value-label {
+    position: relative;
+    top: 8px;
+    left: 70px !important;
+    color: Black !important;
+    font-family: 'Bahnschrift', sans-serif;
+    font-size: 16px;
+    text-align: center !important;
+}
+#cost-breakdown-card {
+    position: absolute;
+    top: 390px; /* 你希望的Y轴位置 */
+    left: 270px; /* 这里随便示范一下，你可以按需要调整 */
+    z-index: 2;
+}
+#demo-ebit-figure {
+    position: absolute;
+    margin-top: -75px;
+    margin-left: 10px;
+    height: 450px !important;
+    width: 400px;   /* 如需控制宽度 */
+    z-index: 20;
+
+}
+
+[id^="dynamic-bubble-graph-"] {
+    position: absolute;
+    margin-top: -75px;
+    margin-left: 308px;
+    height: 450px !important;
+    width: 460px !important; /* 🎯 加上这一句控制宽度 */
+}
+.dark-button {
+    background: White;
+    color: Black;
+    border: 1px solid white;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'Bahnschrift', sans-serif;
+    font-size: 10px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    text-align: center;
+}
+.dark-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+
+
+#top-card {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 200px;
+    height: 60px;
+    background-color: White;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 10;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.nav-logo {
+    height: 70px;
+    width: auto;
+}
+
+.menu-button {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+#ebit-percent-card.card-container  {
+    position: absolute;
+    top: 390px; /* 你希望的Y轴位置 */
+    left: 680px; /* 这里随便示范一下，你可以按需要调整 */
+    z-index: 20;
+    overflow: visible;
+}
+#ebit-percent-card.card-container.moved-ebit {
+    left: 1090px !important; /* 新位置：右移（根据你布局实际调整） */
+    overflow: visible;
+}
+.start-date-dynamic .Select-control,
+.end-date-dynamic .Select-control {
+    width: 100px !important;
+    height: 25px !important;
+
+}
+.start-date-dynamic .Select-control,
+.end-date-dynamic .Select-control,
+.start-date-dynamic .Select-placeholder,
+.end-date-dynamic .Select-placeholder,
+.start-date-dynamic .Select-value,
+.end-date-dynamic .Select-value,
+.start-date-dynamic .Select-value-label,
+.end-date-dynamic .Select-value-label,
+.start-date-dynamic .Select-option,
+.end-date-dynamic .Select-option,
+.start-date-dynamic .Select-multi-value,
+.end-date-dynamic .Select-multi-value,
+.start-date-dynamic .Select-input input,
+.end-date-dynamic .Select-input input {
+    color: black !important;
+    background-color: white !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    font-size: 14px !important;
+    text-align: center !important;
+}
+.start-date-dynamic .Select-option,
+.end-date-dynamic .Select-option {
+    color: black !important;
+    background-color: white !important;
+    font-size: 14px;
+    font-family: 'Bahnschrift', 'sans-serif' !important;
+}
+.dynamic-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 260px;
+}
+
+
+.card-title {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 6px;
+    color: #000000 !important;
+}
+.inv-card-container.inventory-overview {
+    position: absolute;
+    top: 5px;              /* 向上移动 8px */
+    left: 265px;
+    height: 160px;
+    z-index: 10;
+    width: 1225px;
+}
+
+
+#card-pie {
+    width: 450px;
+    height: 245px;
+    position: absolute;
+    top: 180px;
+    left: 1040px;
+
+}
+
+/* ✅ 控制 Dropdown 容器（白底+圆角+固定宽高+居中内容） */
+#inventory-month-container .Select-control {
+    background: white !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    width: 260px !important;
+    height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* ✅ 占位符和选中项：字体黑色、居中 */
+#inventory-month-container .Select-placeholder,
+#inventory-month-container .Select-value-label {
+    color: black !important;
+    text-align: center !important;
+    font-size: 14px !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    position: absolute;
+    top: 0px;
+}
+
+/* ✅ 下拉菜单项样式：字体黑色 */
+#inventory-month-container .Select-menu-outer {
+    color: black !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    font-size: 14px !important;
+}
+
+/* ✅ 控制整个组件位置（居中或靠左） */
+#inventory-month-container {
+    width: 260px;
+    position: absolute;
+    top: 60px;
+    left: 10px;
+}
+.dropdown-white-rounded .Select-control {
+    background: white !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    width: 260px !important;
+    height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-white-rounded .Select-placeholder,
+.dropdown-white-rounded .Select-value-label {
+    color: black !important;
+    text-align: center !important;
+    font-size: 14px !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    position: absolute;
+    top: 0px;
+}
+
+.dropdown-white-rounded .Select-menu-outer {
+    color: black !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    font-size: 14px !important;
+}
+/* 控制外层容器用 flex 并居中子元素 */
+.dropdown-white-rounded .Select-control {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* 关键：让选中项容器撑满，并使用 flex 居中 */
+.dropdown-white-rounded .Select-value {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding-left: 0 !important;
+}
+
+/* 关键：让文字 label 占满并居中 */
+.dropdown-white-rounded .Select-value-label {
+    width: 100% !important;
+    text-align: center !important;
+    font-size: 14px !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    color: black !important;
+}
+
+
+
+#inventory-month-container .Select-control {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* 关键：让选中项容器撑满，并使用 flex 居中 */
+#inventory-month-container .Select-value {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding-left: 0 !important;
+}
+
+/* 关键：让文字 label 占满并居中 */
+#inventory-month-container .Select-value-label {
+    width: 100% !important;
+    text-align: center !important;
+    font-size: 14px !important;
+    font-family: 'Bahnschrift', sans-serif !important;
+    color: black !important;
+}
+.card-header {
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 16px;
+    color: black;
+}
+
+/* 每一行为左右结构，间距加大 */
+.card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;  /* 加大行间距 */
+}
+
+/* 左边字段名靠左 */
+.card-label {
+    flex: 1;
+    text-align: left;
+    font-size: 14px;
+    color: #333;
+}
+
+/* 右边数值居中，绿色字体 */
+.card-value-black {
+    flex: 1;
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+    color: black;
+}
+
+.card-value-green {
+    flex: 1;
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+    color: #2e7d32; /* 深绿色 */
+}
+#normal-source-selector{
+  position: absolute;
+  top: 645px;
+  left: 1060px;
+  z-index: 10;
+}
+#pie-source-selector {
+  position: absolute;
+  top: 330px;
+  left: 1070px;
+  z-index: 10;
+}
+#dio-inventory-graph {
+    height: 450px;
+}
+/* 调整 Note 区块大小与位置 */
+#cost-note {
+  position: absolute;
+  top: 315px;
+  left: 10px;
+  width: 260px;
+  background-color: white;
+  padding: 2px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  font-size: 13px;
+  color: black;
+  z-index: 10;
+}
+.Select-menu,
+.Select-menu-list {
+  max-height: 90px !important;
+  overflow-y: auto !important;
+}
+.Select-menu .Select-option,
+.Select-menu-list .Select-option {
+  min-height: 40px !important;
+  white-space: normal !important;
+}
+
+/* assets/style.css */
