@@ -701,5 +701,10 @@ body {
   min-height: 40px !important;
   white-space: normal !important;
 }
-
+.select-menu-outer{
+    max-height:300px !important;
+    overflow-y: auto !important;
+    z-index: 10 !important;
+}
 /* assets/style.css */
+
