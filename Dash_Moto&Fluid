@@ -1,0 +1,235 @@
+import dash
+from dash import dcc, html, Output, Input, State, ctx, ALL
+import dash_bootstrap_components as dbc
+import pandas as pd
+import io
+import base64
+import plotly.express as px
+import uuid
+import plotly.graph_objects as go
+from dash import MATCH
+import math
+import numpy as np
+from millify import millify
+
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server
+
+# Helper function to get evenly spaced labels for graphs
+def get_evenly_spaced_labels(series, count=6):
+    n = len(series)
+    if n <= count:
+        indices = list(range(n))
+    else:
+        step = n / count
+        indices = [int(round(i * step)) for i in range(count)]
+        indices = sorted(set(min(i, n - 1) for i in indices))
+    labels = []
+    for i, val in enumerate(series):
+        if i in indices:
+            if val < 1000:
+                labels.append(f"{val:,.0f}")
+            else:
+                labels.append(millify(val, precision=0))
+        else:
+            labels.append("")
+    return labels
+
+# Sales page layout
+def sales_page_layout():
+    return html.Div([ 
+        # Sales page content goes here
+    ])
+
+# Cost page layout
+def cost_page_layout():
+    return html.Div([ 
+        html.Div([  # Category section
+            html.Label("Category:", style={"fontWeight": "bold", "color": "black"}),
+            dcc.RadioItems(
+                id="category-selector",
+                options=[
+                    {"label": "Total Inventory", "value": "Total Inventory"},
+                    {"label": "Pads", "value": "Pads"},
+                    {"label": "Disc", "value": "Disc"},
+                    {"label": "Moto", "value": "Moto"},  # Adding Moto
+                    {"label": "Fluid", "value": "Fluid"}  # Adding Fluid
+                ],
+                value="Total Inventory",
+                labelStyle={'display': 'inline-block', 'margin-right': '10px'},
+                style={'font-family': 'Bahnschrift, sans-serif'}
+            )
+        ]),
+        html.Div([  # DIO Chart Section
+            dcc.Graph(id="dio-inventory-graph")
+        ])
+    ])
+
+# Dataframe initialization
+df_store = pd.DataFrame()
+inventory_df = pd.DataFrame()
+balance_df = pd.DataFrame()
+pads_df = pd.DataFrame()
+disc_df = pd.DataFrame()
+
+# Layout for the app
+app.layout = html.Div([  
+    html.Div(
+        id='sidebar-background-color',
+        style={ 'position': 'fixed', 'top': '0', 'left': '0', 'width': '400px', 'height': '100vh', 'backgroundColor': '#D3D3D3', 'zIndex': '0', 'display': 'block', 'overflowY': 'auto' }
+    ),
+    html.Div(
+        style={ 'minHeight': '100vh', 'position': 'relative', 'overflow': 'hidden' },
+        children=[ 
+            dcc.Upload(id='upload-data', children=html.Button("Upload Data")),
+            html.Div(id='main-content', style={'position': 'relative', 'zIndex': '1'}),
+            dbc.Offcanvas(id="sidebar", is_open=False, children=[html.Div(id='sidebar-content')], style={'background-color': 'rgba(0,0,0,0.4)', 'color': 'White'})
+        ]
+    )
+])
+
+# Function to handle file uploads
+@app.callback(
+    [Output('main-content', 'children')],
+    Input('upload-data', 'contents'),
+    State('upload-data', 'filename')
+)
+def display_main_content(contents, filenames):
+    global df_store, inventory_df, balance_df, pads_df, disc_df
+
+    if contents is None:
+        return None
+    
+    contents = contents if isinstance(contents, list) else [contents]
+    filenames = filenames if isinstance(filenames, list) else [filenames]
+
+    all_dfs = []
+    inventory_df = pd.DataFrame()
+
+    for content, filename in zip(contents, filenames):
+        content_type, content_string = content.split(',')
+        decoded = base64.b64decode(content_string)
+
+        if 'inventory' in filename.lower():
+            xls = pd.read_excel(io.BytesIO(decoded), sheet_name=None)
+            df = pd.concat(xls.values(), ignore_index=True)
+            inventory_df = df
+        elif 'pads' in filename.lower():
+            xls_sheets = pd.read_excel(io.BytesIO(decoded), sheet_name=None)
+            pads_df = pd.concat(xls_sheets.values(), ignore_index=True)
+        elif 'disc' in filename.lower():
+            xls_sheets = pd.read_excel(io.BytesIO(decoded), sheet_name=None)
+            disc_df = pd.concat(xls_sheets.values(), ignore_index=True)
+        else:
+            df = pd.read_excel(io.BytesIO(decoded))
+            df_cleaned = clean_data(df)
+            all_dfs.append(df_cleaned)
+
+    df_store = pd.concat(all_dfs, ignore_index=True)
+
+    return [sales_page_layout()]
+
+# Function to clean data for processing
+def clean_data(df):
+    df.columns = df.columns.str.strip()
+    if 'Year' in df.columns and 'Month' in df.columns:
+        df['Date'] = pd.to_datetime(df['Year'].astype(str) + '-' + df['Month'].astype(str).apply(lambda x: x.zfill(2)), format='%Y-%m').dt.strftime('%Y-%m')
+        df = df.drop(columns=['Year', 'Month'])
+    return df
+
+# Callback to update DIO graph based on category
+@app.callback(
+    Output("dio-inventory-graph", "figure"),
+    Input("category-selector", "value"),
+    Input("inv-start-date", "value"),
+    Input("inv-end-date", "value")
+)
+def update_dio_inventory_chart(category, start_date, end_date):
+    if inventory_df.empty or df_store.empty:
+        return go.Figure()
+
+    def filter_by_category(df, col, category):
+        s = df[col].astype(str)
+        if category == "Pads":
+            return df[s.str.startswith("2000")]
+        elif category == "Disc":
+            return df[s.str.startswith(("2330","2300"))]
+        elif category == "Moto":
+            return df[s.str.startswith("34N00037")]  # Assuming Moto is in this group
+        elif category == "Fluid":
+            return df[s.str.startswith("34N00039")]  # Assuming Fluid is in this group
+        elif category == "Total Inventory":
+            return df
+        return df
+
+    # Data filtering for the category
+    inv_df = filter_by_category(inventory_df.copy(), "Item group", category)
+    inv_df = inv_df[inv_df["Cost center"] == "34N00001"]
+    sales_df = df_store.copy()
+
+    # Grouping and calculating DIO
+    summary_df = inv_df.groupby("year_month").agg({
+        "On-hand": "sum",
+        "Inventory value": "sum"
+    }).reset_index().sort_values("year_month")
+
+    sales_df["Date"] = pd.to_datetime(sales_df["Date"], errors="coerce")
+    sales_df["year_month"] = sales_df["Date"].dt.strftime('%Y-%m')
+    sales_monthly = sales_df.groupby("year_month")["Net Sales"].sum().reset_index()
+    sales_dict = sales_df.groupby("year_month")["Net Sales"].sum().to_dict()
+    summary_df = pd.merge(summary_df, sales_monthly, on="year_month", how="left")
+
+    summary_df["DIO"] = None
+    for i, row in summary_df.iterrows():
+        ym = row["year_month"]
+        try:
+            dt = pd.to_datetime(ym)
+            prev_12 = [(dt - pd.DateOffset(months=m)).strftime("%Y-%m") for m in range(0, 12)]
+            monthly_sales = [sales_dict.get(m, 0) for m in prev_12]
+            if len(monthly_sales) == 12 and all(s > 0 for s in monthly_sales):
+                total_sales = sum(monthly_sales)
+                dio = round((row["Inventory value"] / total_sales) * 360, 2)
+                summary_df.at[i, "DIO"] = dio
+        except:
+            continue
+
+    # Plotting DIO graph
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        x=summary_df["year_month"],
+        y=summary_df["Net Sales"],
+        name="Net Sales",
+        marker_color="lightsteelblue"
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=summary_df["year_month"],
+        y=summary_df["Inventory value"],
+        name="Inventory Value",
+        mode="lines+markers",
+        yaxis="y2",
+        line=dict(color="dimgray", width=2),
+        fill='tozeroy',
+        fillcolor='rgba(128,128,128,0)'
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=summary_df["year_month"],
+        y=summary_df["DIO"],
+        name="DIO",
+        mode="lines+markers+text",
+        text=summary_df["DIO"].apply(lambda x: f"{x:.0f}" if pd.notnull(x) else ""),
+        textposition="top center",
+        yaxis="y3",
+        textfont=dict(color="firebrick"),
+        line=dict(color="firebrick", width=2, dash="dot"),
+        fill='tozeroy',
+        fillcolor='rgba(178,34,34,0.2)'
+    ))
+
+    return fig
+
+# Run the app
+if __name__ == '__main__':
+    app.run(debug=True)
