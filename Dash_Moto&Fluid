@@ -81,7 +81,11 @@ app.layout = html.Div([
     html.Div(
         style={ 'minHeight': '100vh', 'position': 'relative', 'overflow': 'hidden' },
         children=[ 
-            dcc.Upload(id='upload-data', children=html.Button("Upload Data")),
+            dcc.Upload(
+                id='upload-data', 
+                children=html.Button("Upload Data"),
+                style={'border': 'none', 'background': 'none', 'cursor': 'pointer'}
+            ),
             html.Div(id='main-content', style={'position': 'relative', 'zIndex': '1'}),
             dbc.Offcanvas(id="sidebar", is_open=False, children=[html.Div(id='sidebar-content')], style={'background-color': 'rgba(0,0,0,0.4)', 'color': 'White'})
         ]
@@ -233,3 +237,4 @@ def update_dio_inventory_chart(category, start_date, end_date):
 # Run the app
 if __name__ == '__main__':
     app.run(debug=True)
+
