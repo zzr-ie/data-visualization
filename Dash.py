@@ -1686,6 +1686,22 @@ def update_inventory_cards(selected_month, pie_source):
         bal_prev.get("102011102 - 在途物资—产成品 刹车片", pd.Series([0])).sum()
     )
 
+
+
+    ###合并
+    # 合并 GIT Disc 和 GIT Pads 数据
+    git_combined, git_combined_prev = (
+        bal_curr.get("102011101 - 在途物资—产成品 刹车盘", pd.Series([0])).sum() +
+        bal_curr.get("102011102 - 在途物资—产成品 刹车片", pd.Series([0])).sum(),
+        bal_prev.get("102011101 - 在途物资—产成品 刹车盘", pd.Series([0])).sum() +
+        bal_prev.get("102011102 - 在途物资—产成品 刹车片", pd.Series([0])).sum()
+    )
+
+    ####合并
+
+
+
+
     # Disc / Pads / Brake / Moto 数量 & 金额
     disc_qty,      disc_qty_prev   = sum_curr_prev("On-hand", ("08","09","14"), df_curr, df_prev)
     disc_amt,      disc_amt_prev   = sum_curr_prev("Inventory value",    ("08","09","14"), df_curr, df_prev)
@@ -1827,8 +1843,12 @@ def update_inventory_cards(selected_month, pie_source):
                     qty_value_card("Pads", pads_qty, pads_amt, mom(pads_amt, pads_amt_prev)),
                     qty_value_card("Moto", moto_qty, moto_amt, mom(moto_amt, moto_amt_prev)),
                     qty_value_card("Fluid", brake_qty, brake_amt, mom(brake_amt, brake_amt_prev)),
-                    value_mom_card("GIT Disc", git_disc, mom(git_disc, git_disc_prev)),
-                    value_mom_card("GIT Pads", git_pads, mom(git_pads, git_pads_prev)),
+                    #合并
+                    # 合并 GIT Disc 和 GIT Pads 为一个卡片
+                    value_mom_card("Goods In Transit", git_combined,
+                                   mom(git_combined, git_combined_prev)),
+                    # value_mom_card("GIT Disc", git_disc, mom(git_disc, git_disc_prev)),
+                    # value_mom_card("GIT Pads", git_pads, mom(git_pads, git_pads_prev)),
                 ]
             )
         ]
