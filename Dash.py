@@ -256,7 +256,9 @@ def cost_page_layout():
                 options=[
                     {"label": "Total Inventory", "value": "Total Inventory"},
                     {"label": "Pads", "value": "Pads"},
-                    {"label": "Disc", "value": "Disc"}
+                    {"label": "Disc", "value": "Disc"},
+                    {"label": "Moto", "value": "Moto"},
+                    {"label": "Fluid", "value": "Fluid"}
                 ],
                 value="Total Inventory"
             )
@@ -1923,7 +1925,8 @@ import math
     Output("dio-inventory-graph", "figure"),
     Input("inv-start-date", "value"),
     Input("inv-end-date", "value"),
-    Input("inv-category", "value")
+    Input("inv-category", "value"),
+    Input("category-selector", "value")
 )
 def update_dio_inventory_chart(start_date, end_date, category):
     if inventory_df.empty or df_store.empty:
@@ -1935,6 +1938,10 @@ def update_dio_inventory_chart(start_date, end_date, category):
             return df[s.str.startswith("2000")]
         elif category == "Disc":
             return df[s.str.startswith(("2330","2300"))]
+        elif category == "Moto":
+            return df[s.str.startswith("34N00037")]
+        elif category == "Fluid":
+            return df[s.str.startswith("34N00039")]
         elif category == "Total Inventory":
             return df
         return df
