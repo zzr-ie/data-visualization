@@ -12,19 +12,25 @@ import math
 import numpy as np
 from millify import millify
 
+# from dash import moto_data
+
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
 from dash import html, dcc, callback_context, Output, Input
-import dash
+import dash  # 修正错误的导入语句
 
 df_store = pd.DataFrame()
 inventory_df = pd.DataFrame()
 balance_df = pd.DataFrame()
 pads_df = pd.DataFrame()
 disc_df = pd.DataFrame()
-moto_df = pd.DataFrame()  # 新增Moto全局变量
-fluid_df = pd.DataFrame()  # 新增Fluid全局变量
+Moto_df = pd.DataFrame()  # 新增Moto全局变量
+Fluid_df = pd.DataFrame()  # 新增Fluid全局变量
+
+# print(moto_df.head())
+# print(fluid_df.head())
+
 
 def get_evenly_spaced_labels(series, count=6):
     n = len(series)
@@ -293,6 +299,29 @@ def cost_page_layout():
             )
         ], style={'marginBottom': '20px'}),
 
+        ##########新增Moto&Fluid DIO#########
+        html.Div([
+            html.Div("Moto & Fluid DIO Trend",
+                     className="card-header",
+                     style={"fontWeight": "bold", "color": "black", "marginBottom": "8px"}),
+            dcc.Graph(
+                id="moto-fluid-dio-graph",
+                config={"displayModeBar": False},
+                style={
+                    "width": "360px",
+                    "height": "250px",
+                    "background": "white",
+                    "borderRadius": "10px",
+                    "padding": "5px"
+                }
+            )
+        ], style={
+            "position": "absolute",
+            "top": "300px",
+            "left": "10px",
+            "zlendex": "10"
+        }),
+
         html.Div(id="inventory-cards", style={"display": "flex", "gap": "10px", "flexWrap": "wrap"}),
         html.Div([
             html.Div("Inventory Value & DIO", className="card-header"),
@@ -323,7 +352,9 @@ def cost_page_layout():
                 options=[
                     {"label": "Overall", "value": "Overall"},
                     {"label": "Pads", "value": "Pads"},  # 合并后的选项
-                    {"label": "Disc", "value": "Disc"}
+                    {"label": "Disc", "value": "Disc"},
+                    {"label": "Moto", "value": "Moto"},
+                    {"label": "Fluid","value": "Fluid"}
                 ],
                 value="Overall",
                 labelStyle={
@@ -421,8 +452,16 @@ app.layout = html.Div([
                 style={'background-color': 'rgba(0,0,0,0.4)', 'color': 'White'}
             ),
             dcc.Store(id='ebit-position-store', data='default'),
-            dcc.Store(id='filter-count-store', data=0)
-
+            dcc.Store(id='filter-count-store', data=0),
+            dcc.Store(id='store_data', data={
+                'df_store': None,
+                'inventory_df': None,
+                'balance_df': None,
+                'pads_df': None,
+                'disc_df': None,
+                'moto_df': None,
+                'fluid_df': None
+            })
         ]
     )
 ]
@@ -432,15 +471,6 @@ app.layout = html.Div([
 # ========== Data Cleaning ========== #
 def clean_data(df):
     df.columns = df.columns.str.strip()
-
-    string_cols = ['Region', 'Sub Region', 'Country', 'Product Type',
-                   'Item - Item Group Full Name', 'Customer - Name', 'Item - Code']
-    for col in string_cols:
-        if col in df.columns:
-            # 截断超过1000字符的字符串
-            df[col] = df[col].astype(str).str.slice(0, 1000).replace('nan', '')
-
-
     if 'Year' in df.columns and 'Month' in df.columns:
         df['Date'] = pd.to_datetime(
             df['Year'].astype(str) + '-' + df['Month'].astype(str).apply(lambda x: x.zfill(2)),
@@ -469,13 +499,14 @@ def calculate_mom(current, previous):
 @app.callback(
     [Output('main-content', 'children'),
      Output('sidebar-content', 'children'),
-     Output('background-image', 'style')],
+     Output('background-image', 'style'),
+     Output('store_data', 'data')],
     Input('upload-data', 'contents'),
     State('upload-data', 'filename'),
     State('background-image', 'style')
 )
 def display_main_content(contents, filenames, img_style):
-    global df_store, inventory_df, balance_df, pads_df, disc_df
+    global df_store, inventory_df, balance_df, pads_df, disc_df, Moto_df, Fluid_df
 
     if contents is None:
         img_style['display'] = 'block'
@@ -495,11 +526,6 @@ def display_main_content(contents, filenames, img_style):
 
         if 'inventory' in filename.lower():
             xls = pd.read_excel(io.BytesIO(decoded), sheet_name=None)
-            chunk_list = []
-            for sheet_name in xls.sheet_names:
-                # 每个工作表分块读取
-                for chunk in pd.read_excel(xls, sheet_name=sheet_name, chunksize=10000):
-                    chunk_list.append(chunk)
             df = pd.concat(xls.values(), ignore_index=True)
 
             inventory_df = df
@@ -523,7 +549,6 @@ def display_main_content(contents, filenames, img_style):
                 ).dt.strftime('%Y-%m')
 
 
-
         elif 'pads' in filename.lower():
 
             global pads_df
@@ -542,10 +567,10 @@ def display_main_content(contents, filenames, img_style):
             disc_df = pd.concat(xls_sheets.values(), ignore_index=True)
 
 
-#############################
-            # -------------------------- 处理Moto文件 --------------------------
-            # 处理Moto文件
-        elif'Moto' in filename.lower():
+        #############################
+        # -------------------------- 处理Moto文件 --------------------------
+        # 处理Moto文件
+        elif 'Moto' in filename.lower():
 
             global moto_df
 
@@ -636,11 +661,19 @@ def display_main_content(contents, filenames, img_style):
             html.Div(id="cost-page", children=cost_page_layout(), style={"display": "none"}),
         ])
     ])
-    return main_content, sidebar_content, img_style
+    return main_content, sidebar_content, img_style, {
+        'df_store': df_store.to_dict('records'),
+        'inventory_df': inventory_df.to_dict('records'),
+        'balance_df': balance_df.to_dict('records'),
+        'pads_df': pads_df.to_dict('records'),
+        'disc_df': disc_df.to_dict('records'),
+        'moto_df': moto_df.to_dict('records'),
+        'fluid_df': fluid_df.to_dict('records')
+    }
 
 
 # ========== Handle Upload ==========
-#处理上传文件
+# 处理上传文件
 @app.callback(
     Output('date-selectors', 'children'),
     Input('upload-data', 'contents'),
@@ -651,7 +684,6 @@ def handle_upload(contents, filenames):
 
     if contents is None or df_store.empty:
         return None
-
 
     date_options = sorted(df_store['Date'].unique())
     region_options = ['ALL Region'] + sorted(df_store['Region'].dropna().unique())
@@ -1084,7 +1116,7 @@ def compute_cost_breakdown(df):
             df["Rebate Amount"].sum() / net_sales_amt,
             df["Freight Out"].sum() / net_sales_amt,
             df["Act Material Cost Total"].sum() / net_sales_amt,
-            df["Contracted Work Total"].sum()/ net_sales_amt,
+            df["Contracted Work Total"].sum() / net_sales_amt,
             df["Commission"].sum() / net_sales_amt,
             df["SG&A Total Exclud. Commission"].sum() / net_sales_amt,
             df["EBIT"].sum() / net_sales_amt
@@ -1245,6 +1277,98 @@ category_colors = {
 
 
 ##########################################
+@app.callback(
+    Output("moto-fluid-dio-graph", "figure"),
+    Input("inv-start-date", "value"),
+    Input("inv-end-date", "value")
+)
+def update_moto_fluid_dio(start, end):
+    # 确保全局变量已定义
+    if 'moto_df' not in globals() or 'fluid_df' not in globals():
+        return go.Figure()
+
+    # 复制数据以避免修改原始数据
+    moto_data = moto_df.copy()
+    fluid_data = fluid_df.copy()
+
+    # 处理日期列，统一格式为YYYY-MM
+    if 'year_month' in moto_data.columns:
+        moto_data['Date'] = pd.to_datetime(moto_data['year_month'], errors='coerce').dt.strftime('%Y-%m')
+    else:
+        moto_data['Date'] = pd.NaT  # 如果没有年份月份列，设为空值
+
+    if 'year_month' in fluid_data.columns:
+        fluid_data['Date'] = pd.to_datetime(fluid_data['year_month'], errors='coerce').dt.strftime('%Y-%m')
+    else:
+        fluid_data['Date'] = pd.NaT  # 如果没有年份月份列，设为空值
+
+    # 过滤时间范围
+    if start:
+        moto_data = moto_data[moto_data['Date'] >= start]
+        fluid_data = fluid_data[fluid_data['Date'] >= start]
+    if end:
+        moto_data = moto_data[moto_data['Date'] <= end]
+        fluid_data = fluid_data[fluid_data['Date'] <= end]
+
+    # 确保DIO列存在且为数值类型
+    if 'DIO' not in moto_data.columns:
+        moto_data['DIO'] = np.nan
+    else:
+        moto_data['DIO'] = pd.to_numeric(moto_data['DIO'], errors='coerce')
+
+    if 'DIO' not in fluid_data.columns:
+        fluid_data['DIO'] = np.nan
+    else:
+        fluid_data['DIO'] = pd.to_numeric(fluid_data['DIO'], errors='coerce')
+
+    # 按日期聚合（取平均值，避免重复数据）
+    moto_agg = moto_data.groupby('Date')['DIO'].mean().reset_index()
+    fluid_agg = fluid_data.groupby('Date')['DIO'].mean().reset_index()
+
+    # 绘图
+    fig = go.Figure()
+
+    # 添加Moto DIO轨迹
+    if not moto_agg.empty and not moto_agg['DIO'].isna().all():
+        fig.add_trace(go.Scatter(
+            x=moto_agg['Date'],
+            y=moto_agg['DIO'],
+            mode='lines+markers',
+            name='Moto DIO',
+            line=dict(color='blue', width=2)
+        ))
+
+    # 添加Fluid DIO轨迹
+    if not fluid_agg.empty and not fluid_agg['DIO'].isna().all():
+        fig.add_trace(go.Scatter(
+            x=fluid_agg['Date'],
+            y=fluid_agg['DIO'],
+            mode='lines+markers',
+            name='Fluid DIO',
+            line=dict(color='green', width=2, dash='dot')
+        ))
+
+    # 更新图表布局
+    fig.update_layout(
+        xaxis_title="Month",
+        yaxis_title="DIO",
+        template="plotly_white",
+        margin=dict(l=30, r=10, t=30, b=30),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.3,
+            xanchor="center",
+            x=0.5
+        )
+    )
+
+    return fig
+
+
+##########################################
+
+
 @app.callback(
     [
         Output('dynamic-filters', 'children'),
@@ -1727,7 +1851,7 @@ def render_dashboard_page(sales_clicks, cost_clicks):
     Output("inventory-cards", "children"),
     [
         Input("inventory-month-selector", "value"),
-        Input("pie-source-selector",      "value")
+        Input("pie-source-selector", "value")
     ]
 )
 def update_inventory_cards(selected_month, pie_source):
@@ -1744,12 +1868,12 @@ def update_inventory_cards(selected_month, pie_source):
     df_curr = inventory_df[inventory_df["year_month"] == selected_month]
     try:
         prev_month = (pd.to_datetime(selected_month) - pd.DateOffset(months=1)).strftime("%Y-%m")
-        df_prev   = inventory_df[inventory_df["year_month"] == prev_month]
-        bal_prev  = balance_df[ balance_df["year_month"] == prev_month ]
+        df_prev = inventory_df[inventory_df["year_month"] == prev_month]
+        bal_prev = balance_df[balance_df["year_month"] == prev_month]
     except:
-        df_prev  = pd.DataFrame()
+        df_prev = pd.DataFrame()
         bal_prev = pd.DataFrame()
-    bal_curr = balance_df[ balance_df["year_month"] == selected_month ]
+    bal_curr = balance_df[balance_df["year_month"] == selected_month]
 
     # —— 计算 MoM 值 —— #
     def mom(curr, prev):
@@ -1760,29 +1884,27 @@ def update_inventory_cards(selected_month, pie_source):
     # —— 按 category/type 聚合当前和上月数据的辅助函数 —— #
     def sum_curr_prev(field, starts, df1, df2):
         mask1 = df1["Item number"].astype(str).str.startswith(starts)
-        curr  = df1.loc[mask1, field].sum()
+        curr = df1.loc[mask1, field].sum()
         if df2 is None or df2.empty:
             prev = 0
         else:
             mask2 = df2["Item number"].astype(str).str.startswith(starts)
-            prev  = df2.loc[mask2, field].sum()
+            prev = df2.loc[mask2, field].sum()
         return curr, prev
 
     # Overall & WIP & GIT
-    total_amt,      total_amt_prev  = (
+    total_amt, total_amt_prev = (
         bal_curr.get("1400-INVENTORY", pd.Series([0])).sum(),
         bal_prev.get("1400-INVENTORY", pd.Series([0])).sum()
     )
-    git_disc,       git_disc_prev   = (
+    git_disc, git_disc_prev = (
         bal_curr.get("102011101 - 在途物资—产成品 刹车盘", pd.Series([0])).sum(),
         bal_prev.get("102011101 - 在途物资—产成品 刹车盘", pd.Series([0])).sum()
     )
-    git_pads,       git_pads_prev   = (
+    git_pads, git_pads_prev = (
         bal_curr.get("102011102 - 在途物资—产成品 刹车片", pd.Series([0])).sum(),
         bal_prev.get("102011102 - 在途物资—产成品 刹车片", pd.Series([0])).sum()
     )
-
-
 
     ###合并
     # 合并 GIT Disc 和 GIT Pads 数据
@@ -1795,26 +1917,23 @@ def update_inventory_cards(selected_month, pie_source):
 
     ####合并
 
-
-
-
     # Disc / Pads / Brake / Moto 数量 & 金额
-    disc_qty,      disc_qty_prev   = sum_curr_prev("On-hand", ("08","09","14"), df_curr, df_prev)
-    disc_amt,      disc_amt_prev   = sum_curr_prev("Inventory value",    ("08","09","14"), df_curr, df_prev)
-    pads_qty,      pads_qty_prev   = sum_curr_prev("On-hand", ("P","S"),       df_curr, df_prev)
-    pads_amt,      pads_amt_prev   = sum_curr_prev("Inventory value",    ("P","S"),       df_curr, df_prev)
-    brake_qty,     brake_qty_prev  = sum_curr_prev("On-hand", ("L",),          df_curr, df_prev)
-    brake_amt,     brake_amt_prev  = sum_curr_prev("Inventory value",    ("L",),          df_curr, df_prev)
+    disc_qty, disc_qty_prev = sum_curr_prev("On-hand", ("08", "09", "14"), df_curr, df_prev)
+    disc_amt, disc_amt_prev = sum_curr_prev("Inventory value", ("08", "09", "14"), df_curr, df_prev)
+    pads_qty, pads_qty_prev = sum_curr_prev("On-hand", ("P", "S"), df_curr, df_prev)
+    pads_amt, pads_amt_prev = sum_curr_prev("Inventory value", ("P", "S"), df_curr, df_prev)
+    brake_qty, brake_qty_prev = sum_curr_prev("On-hand", ("L",), df_curr, df_prev)
+    brake_amt, brake_amt_prev = sum_curr_prev("Inventory value", ("L",), df_curr, df_prev)
 
-    moto_curr = df_curr[df_curr["Cost center"].isin(["34N00037","34N00039"])]
-    moto_prev = df_prev[df_prev["Cost center"].isin(["34N00037","34N00039"])]
-    moto_qty,      moto_qty_prev   = (
+    moto_curr = df_curr[df_curr["Cost center"].isin(["34N00037", "34N00039"])]
+    moto_prev = df_prev[df_prev["Cost center"].isin(["34N00037", "34N00039"])]
+    moto_qty, moto_qty_prev = (
         moto_curr["On-hand"].sum(),
         moto_prev["On-hand"].sum() if not moto_prev.empty else 0
     )
-    moto_amt,      moto_amt_prev   = (
+    moto_amt, moto_amt_prev = (
         moto_curr["Inventory value"].sum(),
-        moto_prev["Inventory value"].sum()   if not moto_prev.empty else 0
+        moto_prev["Inventory value"].sum() if not moto_prev.empty else 0
     )
 
     # —— 渲染卡片的辅助函数 —— #
@@ -1858,7 +1977,7 @@ def update_inventory_cards(selected_month, pie_source):
                 "justifyContent": "space-between",
                 "alignItems": "center",
                 "marginBottom": "6px",
-                "width":'138px',
+                "width": '138px',
                 "height": "30px"
             }
         )
@@ -1931,7 +2050,7 @@ def update_inventory_cards(selected_month, pie_source):
             html.Div("Inventory Balance Overview", className="card-header"),
             # —— 第一行：Disc/Pads/Moto/Brake 都显示 MoM —— #
             html.Div(
-                style={"display": "flex",  "gap": "12px",
+                style={"display": "flex", "gap": "12px",
                        "marginTop": "-10px", "paddingLeft": "8px", "paddingRight": "8px"},
                 children=[
                     value_mom_card("Overall", total_amt, mom(total_amt, total_amt_prev)),
@@ -1939,7 +2058,7 @@ def update_inventory_cards(selected_month, pie_source):
                     qty_value_card("Pads", pads_qty, pads_amt, mom(pads_amt, pads_amt_prev)),
                     qty_value_card("Moto", moto_qty, moto_amt, mom(moto_amt, moto_amt_prev)),
                     qty_value_card("Fluid", brake_qty, brake_amt, mom(brake_amt, brake_amt_prev)),
-                    #合并
+                    # 合并
                     # 合并 GIT Disc 和 GIT Pads 为一个卡片
                     value_mom_card("Goods In Transit", git_combined,
                                    mom(git_combined, git_combined_prev)),
@@ -1981,7 +2100,7 @@ def update_inventory_cards(selected_month, pie_source):
                 id="inventory-pie-graph",
                 figure=fig,
                 config={"displayModeBar": False},
-                style={"marginTop":"-120px",'marginLeft':'40px'},
+                style={"marginTop": "-120px", 'marginLeft': '40px'},
                 className="pie-chart-graph"
             ))
         ],
@@ -1990,7 +2109,6 @@ def update_inventory_cards(selected_month, pie_source):
     )
 
     return [overview_card, pie_div]
-
 
 
 @app.callback(
@@ -2013,86 +2131,75 @@ def switch_page(sales_clicks, cost_clicks):
 
 
 import math
-
-
 @app.callback(
     Output("dio-inventory-graph", "figure"),
     Input("inv-start-date", "value"),
     Input("inv-end-date", "value"),
     Input("inv-category", "value"),
-    # Input("category-selector", "value")
 )
 def update_dio_inventory_chart(start_date, end_date, category):
     if inventory_df.empty or df_store.empty:
         return go.Figure()
 
-        ####################################################################################
-
-        def filter_by_category(df, category_col, category):  # 新增 category_col 参数
-            if category == "Pads":
-                return df[df[category_col].astype(str).str.startswith("2000")]
-            elif category == "Disc":
-                return df[df[category_col].astype(str).str.startswith(("2330", "2300"))]
-
-    #####################################################################################
-
-
-
-    def filter_by_category(df, category):
+    def filter_by_category(df, category_col, category):
         if category == "Pads":
-            return df[df["Item group"].astype(str).str.startswith("2000")]
+            return df[df[category_col].astype(str).str.startswith("2000")]
         elif category == "Disc":
-            return df[df["Item group"].astype(str).str.startswith(("2330","2300"))]
+            return df[df[category_col].astype(str).str.startswith(("2330", "2300"))]
         elif category == "Moto":
-            return df[df["Cost center"].isin(["34N00037", "34N00039"])]  # 按成本中心筛选Moto
+            return df[df["Cost center"].isin(["34N00037", "34N00039"])]
         elif category == "Fluid":
-            return df[df["Cost center"] == "34N0001"]  # 按成本中心筛选Fluid
+            return df[df["Cost center"] == "34N0001"]
         elif category == "Total Inventory":
             return df
         return df
 
-    # ==== 数据准备 ====
+    # === 提取Moto的DIO数据 ===
+    moto_filtered = moto_df[
+        (moto_df["year_month"] >= start_date) &
+        (moto_df["year_month"] <= end_date)
+    ].copy() if not moto_df.empty else pd.DataFrame(columns=["year_month", "DIO"])
+    moto_dio = moto_filtered.groupby("year_month")["DIO"].mean().reset_index()
+    moto_dio = moto_dio.rename(columns={"DIO": "Moto DIO"})
+
+    # === 提取Fluid的DIO数据 ===
+    fluid_filtered = fluid_df[
+        (fluid_df["year_month"] >= start_date) &
+        (fluid_df["year_month"] <= end_date)
+    ].copy() if not fluid_df.empty else pd.DataFrame(columns=["year_month", "DIO"])
+    fluid_dio = fluid_filtered.groupby("year_month")["DIO"].mean().reset_index()
+    fluid_dio = fluid_dio.rename(columns={"DIO": "Fluid DIO"})
+
+    # === 主数据处理 ===
     if category == "Total Inventory":
         if "1400-INVENTORY" not in balance_df.columns:
             return go.Figure()
-
         bal_filtered = balance_df[
             (balance_df["year_month"] >= start_date) &
             (balance_df["year_month"] <= end_date)
-            ].copy()
-
+        ].copy()
         summary_df = bal_filtered[["year_month", "1400-INVENTORY"]].copy()
         summary_df = summary_df.rename(columns={"1400-INVENTORY": "Inventory value"})
         summary_df = summary_df.sort_values("year_month")
-
         qty_df = inventory_df.groupby("year_month")["On-hand"].sum().reset_index()
         qty_df = qty_df[qty_df["year_month"].between(start_date, end_date)]
-
         summary_df = pd.merge(summary_df, qty_df, on="year_month", how="left")
-
         sales_df = df_store.copy()
-        sales_df["Date"] = pd.to_datetime(sales_df["Date"], errors="coerce")
-        sales_df["year_month"] = sales_df["Date"].dt.strftime('%Y-%m')
-        sales_monthly = sales_df.groupby("year_month")["Net Sales"].sum().reset_index()
-
     else:
-
         inv_df = filter_by_category(inventory_df.copy(), "Item group", category)
         inv_df = inv_df[inv_df["Cost center"] == "34N00001"]
         sales_df = filter_by_category(df_store.copy(), "Item - Item Group Full Name", category)
-
         summary_df = inv_df.groupby("year_month").agg({
             "On-hand": "sum",
             "Inventory value": "sum"
         }).reset_index().sort_values("year_month")
 
+    # 计算总DIO
     sales_df["Date"] = pd.to_datetime(sales_df["Date"], errors="coerce")
     sales_df["year_month"] = sales_df["Date"].dt.strftime('%Y-%m')
     sales_monthly = sales_df.groupby("year_month")["Net Sales"].sum().reset_index()
     sales_dict = sales_df.groupby("year_month")["Net Sales"].sum().to_dict()
     summary_df = pd.merge(summary_df, sales_monthly, on="year_month", how="left")
-
-    # ==== 计算 DIO ====
     summary_df["DIO"] = None
     for i, row in summary_df.iterrows():
         ym = row["year_month"]
@@ -2107,22 +2214,18 @@ def update_dio_inventory_chart(start_date, end_date, category):
         except:
             continue
 
-    # ==== 打印 DIO ====
-    filtered_dio = summary_df[
-        (summary_df["year_month"] >= start_date) &
-        (summary_df["year_month"] <= end_date) &
-        (summary_df["DIO"].notna())
-        ][["year_month", "DIO"]]
-
-    # ==== 筛选时间范围用于绘图 ====
+    # 合并Moto/Fluid DIO数据
+    summary_df = pd.merge(summary_df, moto_dio, on="year_month", how="left")
+    summary_df = pd.merge(summary_df, fluid_dio, on="year_month", how="left")
     summary_df = summary_df[
         (summary_df["year_month"] >= start_date) &
         (summary_df["year_month"] <= end_date)
-        ]
-    # ==== 绘图 ====
+    ]
+
+    # === 绘图 ===
     fig = go.Figure()
 
-    # 库存数量柱状图
+    # 1. 净销售额（柱状图）
     fig.add_trace(go.Bar(
         x=summary_df["year_month"],
         y=summary_df["Net Sales"],
@@ -2131,6 +2234,7 @@ def update_dio_inventory_chart(start_date, end_date, category):
         hovertemplate="Sales: %{y:,.2f}<br>Date: %{x}"
     ))
 
+    # 2. 库存价值（折线图）
     fig.add_trace(go.Scatter(
         x=summary_df["year_month"],
         y=summary_df["Inventory value"],
@@ -2143,38 +2247,62 @@ def update_dio_inventory_chart(start_date, end_date, category):
         hovertemplate="Amount: %{y:,.2f}<br>Date: %{x}"
     ))
 
+    # 3. 总DIO（折线图）
     fig.add_trace(go.Scatter(
         x=summary_df["year_month"],
         y=summary_df["DIO"],
-        name="DIO",
+        name="Total DIO",
         mode="lines+markers+text",
         text=summary_df["DIO"].apply(lambda x: f"{x:.0f}" if pd.notnull(x) else ""),
         textposition="top center",
         yaxis="y3",
         textfont=dict(color="firebrick"),
-        line=dict(color="firebrick", width=2, dash="dot"),
+        line=dict(color="firebrick", width=2, dash="solid"),
         fill='tozeroy',
         fillcolor='rgba(178,34,34,0.2)',
-        hovertemplate="DIO: %{y:,.2f}<br>Date: %{x}"
+        hovertemplate="Total DIO: %{y:,.2f}<br>Date: %{x}"
     ))
 
+    # 4. Moto DIO（新增）
+    if not summary_df["Moto DIO"].isna().all():
+        fig.add_trace(go.Scatter(
+            x=summary_df["year_month"],
+            y=summary_df["Moto DIO"],
+            name="Moto DIO",
+            mode="lines+markers+text",
+            text=summary_df["Moto DIO"].apply(lambda x: f"{x:.0f}" if pd.notnull(x) else ""),
+            textposition="top center",
+            yaxis="y3",
+            textfont=dict(color="blue"),
+            line=dict(color="blue", width=2, dash="dash"),
+            hovertemplate="Moto DIO: %{y:,.2f}<br>Date: %{x}"
+        ))
+
+    # 5. Fluid DIO（新增）
+    if not summary_df["Fluid DIO"].isna().all():
+        fig.add_trace(go.Scatter(
+            x=summary_df["year_month"],
+            y=summary_df["Fluid DIO"],
+            name="Fluid DIO",
+            mode="lines+markers+text",
+            text=summary_df["Fluid DIO"].apply(lambda x: f"{x:.0f}" if pd.notnull(x) else ""),
+            textposition="top center",
+            yaxis="y3",
+            textfont=dict(color="green"),
+            line=dict(color="green", width=2, dash="dot"),
+            hovertemplate="Fluid DIO: %{y:,.2f}<br>Date: %{x}"
+        ))
+
+    # 布局配置
     x_vals = summary_df["year_month"].tolist()
     tickvals = [x_vals[i] for i in np.linspace(0, len(x_vals) - 1, 5).astype(int)] if len(x_vals) > 5 else x_vals
-    dio_min = summary_df["DIO"].min()
-    dio_max = summary_df["DIO"].max()
-    inventory_min = summary_df["Inventory value"].min()
-    inventory_max = summary_df["Inventory value"].max()
-    offset_min2= 2000000
-    offset_max2 = 20000000
-    offset_min = 10
-    offset_max = 10
     fig.update_layout(
         margin=dict(t=0, b=0),
         paper_bgcolor='white',
         plot_bgcolor='white',
         legend=dict(
             x=0.0,
-            y=1.15,
+            y=1.2,
             font=dict(size=8),
             bgcolor='rgba(255,255,255,0.6)',
             borderwidth=0
@@ -2194,19 +2322,15 @@ def update_dio_inventory_chart(start_date, end_date, category):
             overlaying="y",
             side="right",
             showgrid=False,
-            tickfont=dict(size=10),
-            range=[-50000000, inventory_max]
+            tickfont=dict(size=10)
         ),
         yaxis3=dict(
             overlaying="y",
             side="right",
-            position=0.95,
-            showticklabels=False,
+            position=1.05,  # 稍微偏移，避免与y2重叠
             showgrid=False,
-            ticks="",
-            title="",
-            zeroline=False,
-            range=[dio_min - offset_min, dio_max + offset_max]
+            title="DIO",
+            tickfont=dict(size=10)
         )
     )
 
@@ -2351,11 +2475,6 @@ def update_normal_coverage(selected_month, selected_source):
         className="pie-chart-graph"
     )
 
-
-
-
-
-
 @app.callback(
     Output("inventory-pie-graph", "figure"),
     [
@@ -2407,4 +2526,6 @@ def update_pie_figure(selected_month, selected_category):
 
 # ========== Run ==========
 if __name__ == '__main__':
-    app.run(debug=True)
+     app.run(debug=True)
+    # app.run_server(debug=True,
+    #            port=8051)
