@@ -256,9 +256,7 @@ def cost_page_layout():
                 options=[
                     {"label": "Total Inventory", "value": "Total Inventory"},
                     {"label": "Pads", "value": "Pads"},
-                    {"label": "Disc", "value": "Disc"},
-                    {"label": "Moto", "value": "Moto"},
-                    {"label": "Fluid", "value": "Fluid"}
+                    {"label": "Disc", "value": "Disc"}
                 ],
                 value="Total Inventory"
             )
@@ -278,9 +276,7 @@ def cost_page_layout():
                 options=[
                     {'label': 'Overall', 'value': 'Total'},
                     {'label': 'Pads', 'value': 'Pads'},
-                    {'label': 'Disc', 'value': 'Disc'},
-                    {'label': 'Moto', 'value': 'Moto'},
-                    {'label': 'Fluid', 'value': 'Fluid'}
+                    {'label': 'Disc', 'value': 'Disc'}
                 ],
                 value='Total',
                 labelStyle={'display': 'block', 'marginRight': '12px', 'color': 'black'},
@@ -317,10 +313,8 @@ def cost_page_layout():
                 id="normal-source-selector",
                 options=[
                     {"label": "Overall", "value": "Overall"},
-                    {"label": "Pads", "value": "Pads"},
-                    {"label": "Disc", "value": "Disc"},
-                    {"label": "Moto", "value": "Moto"},
-                    {"label": "Fluid", "value": "Fluid"}
+                    {"label": "Pads", "value": "Pads"},  # 合并后的选项
+                    {"label": "Disc", "value": "Disc"}
                 ],
                 value="Overall",
                 labelStyle={
@@ -353,8 +347,8 @@ inventory_df = pd.DataFrame()
 balance_df = pd.DataFrame()
 pads_df = pd.DataFrame()
 disc_df = pd.DataFrame()
-moto_df = pd.DataFrame()
-fluid_df = pd.DataFrame()
+moto_df = pd.DataFrame()  # 新增Moto全局变量
+fluid_df = pd.DataFrame()  # 新增Fluid全局变量
 
 
 # ========== Layout ========== #
@@ -1646,7 +1640,7 @@ def update_inventory_cards(selected_month, pie_source):
     import pandas as pd
     import plotly.express as px
     from dash import html, dcc
-    global inventory_df, balance_df, pads_df, disc_df, moto_df, fluid_df
+    global inventory_df, balance_df, pads_df, disc_df
 
     # 如果没选月份或数据空，直接返回
     if not selected_month or inventory_df.empty:
@@ -1707,13 +1701,17 @@ def update_inventory_cards(selected_month, pie_source):
 
     ####合并
 
-    # Disc / Pads / Moto / Fluid 数量 & 金额
+
+
+
+    # Disc / Pads / Brake / Moto 数量 & 金额
     disc_qty,      disc_qty_prev   = sum_curr_prev("On-hand", ("08","09","14"), df_curr, df_prev)
     disc_amt,      disc_amt_prev   = sum_curr_prev("Inventory value",    ("08","09","14"), df_curr, df_prev)
     pads_qty,      pads_qty_prev   = sum_curr_prev("On-hand", ("P","S"),       df_curr, df_prev)
     pads_amt,      pads_amt_prev   = sum_curr_prev("Inventory value",    ("P","S"),       df_curr, df_prev)
-    
-    # Moto 数据
+    brake_qty,     brake_qty_prev  = sum_curr_prev("On-hand", ("L",),          df_curr, df_prev)
+    brake_amt,     brake_amt_prev  = sum_curr_prev("Inventory value",    ("L",),          df_curr, df_prev)
+
     moto_curr = df_curr[df_curr["Cost center"].isin(["34N00037","34N00039"])]
     moto_prev = df_prev[df_prev["Cost center"].isin(["34N00037","34N00039"])]
     moto_qty,      moto_qty_prev   = (
@@ -1724,10 +1722,6 @@ def update_inventory_cards(selected_month, pie_source):
         moto_curr["Inventory value"].sum(),
         moto_prev["Inventory value"].sum()   if not moto_prev.empty else 0
     )
-    
-    # Fluid 数据
-    fluid_qty,     fluid_qty_prev  = sum_curr_prev("On-hand", ("L",),          df_curr, df_prev)
-    fluid_amt,     fluid_amt_prev  = sum_curr_prev("Inventory value",    ("L",),          df_curr, df_prev)
 
     # —— 渲染卡片的辅助函数 —— #
     def value_only_card(title, amount, mom_pct):
@@ -1841,7 +1835,7 @@ def update_inventory_cards(selected_month, pie_source):
         className="inv-card-container inventory-overview",
         children=[
             html.Div("Inventory Balance Overview", className="card-header"),
-            # —— 第一行：Disc/Pads/Moto/Fluid 都显示 MoM —— #
+            # —— 第一行：Disc/Pads/Moto/Brake 都显示 MoM —— #
             html.Div(
                 style={"display": "flex",  "gap": "12px",
                        "marginTop": "-10px", "paddingLeft": "8px", "paddingRight": "8px"},
@@ -1850,17 +1844,19 @@ def update_inventory_cards(selected_month, pie_source):
                     qty_value_card("Disc", disc_qty, disc_amt, mom(disc_amt, disc_amt_prev)),
                     qty_value_card("Pads", pads_qty, pads_amt, mom(pads_amt, pads_amt_prev)),
                     qty_value_card("Moto", moto_qty, moto_amt, mom(moto_amt, moto_amt_prev)),
-                    qty_value_card("Fluid", fluid_qty, fluid_amt, mom(fluid_amt, fluid_amt_prev)),
+                    qty_value_card("Fluid", brake_qty, brake_amt, mom(brake_amt, brake_amt_prev)),
                     #合并
                     # 合并 GIT Disc 和 GIT Pads 为一个卡片
                     value_mom_card("Goods In Transit", git_combined,
                                    mom(git_combined, git_combined_prev)),
+                    # value_mom_card("GIT Disc", git_disc, mom(git_disc, git_disc_prev)),
+                    # value_mom_card("GIT Pads", git_pads, mom(git_pads, git_pads_prev)),
                 ]
             )
         ]
     )
 
-    # —— Pie 部分（根据选择的数据源） —— #
+    # —— Pie 部分（保持原有设定） —— #
     if pie_source == "Pads":
         df_pie = pads_df[pads_df["year_month"] == selected_month]
     elif pie_source == "Disc":
@@ -2165,7 +2161,6 @@ def update_tab_button_style(sales_clicks, cost_clicks):
 def update_normal_coverage(selected_month, selected_source):
     if not selected_month:
         return html.Div("")
-        
     if selected_source == "Pads":
         df = pads_df
     elif selected_source == "Disc":
@@ -2175,8 +2170,7 @@ def update_normal_coverage(selected_month, selected_source):
     elif selected_source == "Fluid":
         df = fluid_df
     else:
-        df = pd.concat([pads_df, disc_df, moto_df, fluid_df], ignore_index=True)
-        
+        df = pd.concat([pads_df,disc_df],ignore_index=True)
     df = df[
         (df['year_month'] == selected_month) &
         (df['category'] == 'Normal')
@@ -2267,7 +2261,7 @@ def update_normal_coverage(selected_month, selected_source):
     ]
 )
 def update_pie_figure(selected_month, selected_category):
-    global inventory_df, pads_df, disc_df, moto_df, fluid_df
+    global inventory_df, pads_df, disc_df
 
     if not selected_month or inventory_df.empty:
         return go.Figure()
@@ -2281,7 +2275,7 @@ def update_pie_figure(selected_month, selected_category):
     elif selected_category == 'Fluid':
         df = fluid_df[fluid_df['year_month'] == selected_month]
     else:  # Total
-        df = pd.concat([pads_df, disc_df, moto_df, fluid_df], ignore_index=True)
+        df = pd.concat([pads_df, disc_df], ignore_index=True)
         df = df[df['year_month'] == selected_month]
 
     pie_df = df.groupby('category', as_index=False)['Inventory value'].sum()
