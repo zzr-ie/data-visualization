@@ -5,6 +5,7 @@ import pandas as pd
 import io
 import base64
 import plotly.express as px
+import openpyxl
 import uuid
 import plotly.graph_objects as go
 from dash import MATCH
@@ -389,6 +390,7 @@ def cost_page_layout():
 # disc_df = pd.DataFrame()
 
 
+
 # ========== Layout ========== #
 app.layout = html.Div([
     # ✅ 灰色 Sidebar
@@ -471,23 +473,44 @@ app.layout = html.Div([
 # ========== Data Cleaning ========== #
 def clean_data(df):
     df.columns = df.columns.str.strip()
-    if 'Year' in df.columns and 'Month' in df.columns:
-        df['Date'] = pd.to_datetime(
-            df['Year'].astype(str) + '-' + df['Month'].astype(str).apply(lambda x: x.zfill(2)),
-            format='%Y-%m'
-        ).dt.strftime('%Y-%m')
-        df = df.drop(columns=['Year', 'Month'])
-    string_cols = ['Region', 'Sub Region', 'Country', 'Product Type',
-                   'Item - Item Group Full Name', 'Customer - Name', 'Item - Code']
-    for col in df.columns:
-        if col in string_cols:
-            df[col] = df[col].astype(str)
-        elif col != 'Date':
-            df[col] = pd.to_numeric(df[col], errors='coerce').where(pd.notnull(df[col]), None)
-    cols = ['Date'] + [col for col in df.columns if col != 'Date']
-    if 'Item - Item Group Full Name' in df.columns:
-        df = df[df['Item - Item Group Full Name'] != '2900 - Packaging']
-    return df[cols]
+    if 'year_month' in ["moto","fluid"]:
+        if "year_month" in df.columns:
+            df['Date']=pd.to_datetime(df['year_month'],errors='ceorce').dt.strftime('%Y-%m')
+            df=df.drop(columns=['year_month'])
+        elif 'Date' not in df.columns:
+            print(f"Warning:{'year_month'} file missing both 'Date' and 'year_month' columns!")
+            return pd.DataFrame()
+        elif 'year_month' in ["pads","disc"]:
+            pass
+        string_cols = ['Region', 'Sub Region', 'Country', 'Product Type',
+                       'Item - Item Group Full Name', 'Customer - Name', 'Item - Code']
+        for col in df.colums:
+            if col in string_cols:
+                df[col] = df[col].astype(str)
+            elif col !='Date':
+                df[col] = pd.to_numeric(df[col], errors='coerce').where(df[col].notnull(df[col]), None)
+
+        cols=['Date']+[col for col in df.columns if col !='Date']
+        return df[cols]
+
+
+    # if 'Year' in df.columns and 'Month' in df.columns:
+    #     df['Date'] = pd.to_datetime(
+    #         df['Year'].astype(str) + '-' + df['Month'].astype(str).apply(lambda x: x.zfill(2)),
+    #         format='%Y-%m'
+    #     ).dt.strftime('%Y-%m')
+    #     df = df.drop(columns=['Year', 'Month'])
+    # string_cols = ['Region', 'Sub Region', 'Country', 'Product Type',
+    #                'Item - Item Group Full Name', 'Customer - Name', 'Item - Code']
+    # for col in df.columns:
+    #     if col in string_cols:
+    #         df[col] = df[col].astype(str)
+    #     elif col != 'Date':
+    #         df[col] = pd.to_numeric(df[col], errors='coerce').where(pd.notnull(df[col]), None)
+    # cols = ['Date'] + [col for col in df.columns if col != 'Date']
+    # if 'Item - Item Group Full Name' in df.columns:
+    #     df = df[df['Item - Item Group Full Name'] != '2900 - Packaging']
+    # return df[cols]
 
 
 def calculate_mom(current, previous):
@@ -623,15 +646,8 @@ def display_main_content(contents, filenames, img_style):
             #####################################
 
         else:
-            # df = pd.read_excel(io.BytesIO(decoded))
-            # df_cleaned = clean_data(df)
-            # 分块读取大文件，每块10000行
-            chunk_list = []
-            for chunk in pd.read_excel(io.BytesIO(decoded), chunksize=10000):
-                chunk_cleaned = clean_data(chunk)
-                chunk_list.append(chunk_cleaned)
-            df_cleaned = pd.concat(chunk_list, ignore_index=True)
-
+            df = pd.read_excel(io.BytesIO(decoded))
+            df_cleaned = clean_data(df)
             if 'Country' in df_cleaned.columns:
                 df_cleaned['Country'] = df_cleaned['Country'].astype(str).str.upper()
             if 'Product Type' in df_cleaned.columns:
@@ -1915,7 +1931,6 @@ def update_inventory_cards(selected_month, pie_source):
         bal_prev.get("102011102 - 在途物资—产成品 刹车片", pd.Series([0])).sum()
     )
 
-    ####合并
 
     # Disc / Pads / Brake / Moto 数量 & 金额
     disc_qty, disc_qty_prev = sum_curr_prev("On-hand", ("08", "09", "14"), df_curr, df_prev)
