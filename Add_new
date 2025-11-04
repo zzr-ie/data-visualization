@@ -351,7 +351,25 @@ disc_df = pd.DataFrame()
 
 # ========== Layout ========== #
 app.layout = html.Div([
-    # ✅ 灰色 Sidebar
+    (dcc.Location(id='url', refresh=False),
+# 你现有的布局内容
+    html.Div([
+        html.H1("Welcome to the Homepage!"),
+        # 添加按钮，用于跳转到新页面
+        html.Button("Go to New Page", id="go-to-new-page", n_clicks=0)
+    ], id="home-page"),
+
+    # 新页面内容（隐藏）
+    html.Div([
+        html.H1("This is the New Page!"),
+        html.Button("Go Back to Home", id="go-back-home", n_clicks=0)
+    ], id="new-page", style={"display": "none"}),
+
+    # 你现有的其他内容（如图表、筛选器等）
+),
+    
+    
+    #灰色 Sidebar
     html.Div(
         id='sidebar-background-color',
         style={
@@ -367,7 +385,7 @@ app.layout = html.Div([
         }
     ),
 
-    # ✅ 页面主体，禁用页面滚动
+    # 页面主体，禁用页面滚动
     html.Div(
         style={
             'minHeight': '100vh',
@@ -2234,8 +2252,49 @@ def update_normal_coverage(selected_month, selected_source):
         className="pie-chart-graph"
     )
 
+# 添加按钮点击回调来控制页面跳转
+@app.callback(
+    Output('url', 'href'),
+    Input('go-to-new-page', 'n_clicks'),
+    prevent_initial_call=True
+)
+def go_to_new_page(n_clicks):
+    return "/new_page"  # 跳转到新页面
 
+@app.callback(
+    Output('url', 'href'),
+    Input('go-back-home', 'n_clicks'),
+    prevent_initial_call=True
+)
+def go_back_home(n_clicks):
+    return "/"  # 返回首页
 
+# 根据 URL 显示不同的页面内容
+@app.callback(
+    [Output("home-page", "style"), Output("new-page", "style")],
+    [Input('url', 'pathname')]
+)
+def display_page(pathname):
+    if pathname == "/new_page":
+        return {"display": "none"}, {"display": "block"}  # 显示新页面，隐藏首页
+    else:
+        return {"display": "block"}, {"display": "none"}  # 显示首页，隐藏新页面
+
+# 示例图表更新回调
+@app.callback(
+    Output('example-graph', 'figure'),
+    Input('url', 'pathname')
+)
+def update_graph(pathname):
+    # 仅当在首页时更新图表
+    if pathname == "/":
+        df = pd.DataFrame({
+            "Category": ["A", "B", "C", "D"],
+            "Value": [10, 15, 20, 25]
+        })
+        fig = px.bar(df, x="Category", y="Value")
+#        return fig
+#    return {}
 
 
 
