@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Bahnschrift:wght@500&display=swap');
+
+/* ==================== 通用样式 ==================== */
+body {
+    font-family: 'Bahnschrift', sans-serif;
+    color: white;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    margin: 0;
+    padding: 0;
+}
+
+/* ==================== 上传 Logo ==================== */
+.upload-logo {
+    width: 200px;
+    height: auto;
+    transition: transform 0.2s;
+}
+.upload-logo:hover {
+    transform: scale(1.05);
+}
+
+/* ==================== 动态筛选器组 ==================== */
+.transparent-dropdown {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ==================== 位置布局 ==================== */
+.start-date-default,
+.end-date-default{
+    position: absolute;
+    top: 170px;
+    text-align: center;
+    color: Black;
+}
+.region-container{
+    position: absolute;
+    top: 200px;
+    text-align: center;
+    color: Black;
+}
+
+/* (trimmed for brevity in this copied stylesheet) */
+
+/* We'll keep the rest of the original stylesheet to preserve design.
+   For brevity in the repository we include the most relevant classes used
+   by the React components: card-container, inv-card-container, card-header,
+   inventory-month-container and basic dropdown/button styling. */
+
+.card-container,
+.inv-card-container{
+    background: white;
+    border: 1px solid white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    margin: 20px;
+    padding: 0px;
+    transition: transform 0.3s ease;
+    margin-top: -13px;
+}
+
+.inv-card-container .card-header,
+.card-container .card-header {
+    font-family: 'Bahnschrift', sans-serif;
+    font-size: 18px;
+    color: black;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 12px;
+    text-align: center;
+    border-bottom: 1px solid white;
+    box-sizing: border-box;
+}
+
+.inventory-overview {
+    position: relative;
+    top: 5px;
+    left: 0;
+    height: auto;
+    z-index: 10;
+    width: 100%;
+}
+
+.inventory-cards-row { display:flex; gap:12px; flex-wrap:wrap }
+.inventory-left { flex: 1 1 680px }
+.inventory-right { width: 360px }
+.card-title { font-weight: bold; font-size: 14px; margin-bottom: 6px; color: #000000 !important; }
+
+.small-button { padding:8px 12px; border-radius:8px; border:1px solid #e0e0e0; background:white }
+
+.upload-area { position: absolute; left: 35px; top: -30px }
+
+/* table styles for top-items */
+.top-items-table { width:100%; border-collapse: collapse; margin-top:8px }
+.top-items-table th, .top-items-table td { border-bottom: 1px solid #eee; padding:8px; text-align:left; font-size:13px; color:#222 }
+.top-items-table th { background: #fafafa }
