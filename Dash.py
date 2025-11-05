@@ -279,7 +279,9 @@ def cost_page_layout():
                 options=[
                     {'label': 'Overall', 'value': 'Total'},
                     {'label': 'Pads', 'value': 'Pads'},
-                    {'label': 'Disc', 'value': 'Disc'}
+                    {'label': 'Disc', 'value': 'Disc'},
+                    {"label": "Moto", "value": "Moto"},
+                    {"label": "Fluid", "value": "Fluid"}
                 ],
                 value='Total',
                 labelStyle={'display': 'block', 'marginRight': '12px', 'color': 'black'},
@@ -317,7 +319,9 @@ def cost_page_layout():
                 options=[
                     {"label": "Overall", "value": "Overall"},
                     {"label": "Pads", "value": "Pads"},  # 合并后的选项
-                    {"label": "Disc", "value": "Disc"}
+                    {"label": "Disc", "value": "Disc"},
+                    {"label": "Moto", "value": "Moto"},
+                    {"label": "Fluid", "value": "Fluid"},
                 ],
                 value="Overall",
                 labelStyle={
@@ -350,6 +354,8 @@ inventory_df = pd.DataFrame()
 balance_df = pd.DataFrame()
 pads_df = pd.DataFrame()
 disc_df = pd.DataFrame()
+moto_df = pd.DataFrame()  # 新增Moto全局变量
+fluid_df = pd.DataFrame()  # 新增Fluid全局变量
 
 
 # ========== Layout ========== #
@@ -462,7 +468,7 @@ def calculate_mom(current, previous):
     State('background-image', 'style')
 )
 def display_main_content(contents, filenames, img_style):
-    global df_store, inventory_df, balance_df, pads_df, disc_df
+    global df_store, inventory_df, balance_df, pads_df, disc_df, moto_df, fluid_df
 
     if contents is None:
         img_style['display'] = 'block'
@@ -2321,3 +2327,4 @@ def update_pie_figure(selected_month, selected_category):
 # ========== Run ==========
 if __name__ == '__main__':
     app.run(debug=True)
+
