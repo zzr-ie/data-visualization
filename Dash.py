@@ -12,8 +12,12 @@ import math
 import numpy as np
 from millify import millify
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+    # --- Defensive normalization: many inventory files use slightly different column names
+    # Normalize common column names so later code (which expects 'On-hand', 'Inventory value',
+    # 'Item number', 'Cost center', 'year_month') works reliably.
 server = app.server
+
+app.config.suppress_callback_exceptions = True
 
 from dash import html, dcc, callback_context, Output, Input
 import dash
@@ -405,6 +409,8 @@ app.layout = html.Div([
                 }
             ),
             html.Div(id='main-content', style={'position': 'relative', 'zIndex': '1'}),
+            # Hidden placeholder for callbacks that reference 'add-filter' before the dynamic layout is rendered
+            html.Button(id='add-filter', n_clicks=0, style={'display': 'none'}),
             dbc.Offcanvas(
                 id="sidebar",
                 is_open=False,
@@ -518,6 +524,15 @@ def display_main_content(contents, filenames, img_style):
 
             disc_df = pd.concat(xls_sheets.values(), ignore_index=True)
 
+        elif 'moto' in filename.lower():
+            global moto_df
+            xls_sheets = pd.read_excel(io.BytesIO(decoded), sheet_name=None)
+            moto_df = pd.concat(xls_sheets.values(), ignore_index=True)
+
+        elif 'fluid' in filename.lower():
+            global fluid_df
+            xls_sheets = pd.read_excel(io.BytesIO(decoded), sheet_name=None)
+            fluid_df = pd.concat(xls_sheets.values(), ignore_index=True)
 
         else:
             df = pd.read_excel(io.BytesIO(decoded))
@@ -575,7 +590,6 @@ def handle_upload(contents, filenames):
     item_group_options = ['ALL Item Group'] + sorted(df_store['Item - Item Group Full Name'].dropna().unique())
     customer_name_options = ['ALL Customer'] + sorted(df_store['Customer - Name'].dropna().unique())
     item_code_options = ['ALL Item Code'] + sorted(df_store['Item - Code'].dropna().unique())
-
     return html.Div([
         dcc.Dropdown(
             id={'type': 'start-date', 'index': 'default'},
@@ -1638,7 +1652,7 @@ def update_inventory_cards(selected_month, pie_source):
     import pandas as pd
     import plotly.express as px
     from dash import html, dcc
-    global inventory_df, balance_df, pads_df, disc_df
+    global inventory_df, balance_df, pads_df, disc_df,moto_df,fluid_df
 
     # 如果没选月份或数据空，直接返回
     if not selected_month or inventory_df.empty:
@@ -1859,8 +1873,12 @@ def update_inventory_cards(selected_month, pie_source):
         df_pie = pads_df[pads_df["year_month"] == selected_month]
     elif pie_source == "Disc":
         df_pie = disc_df[disc_df["year_month"] == selected_month]
+    elif pie_source == "Moto":
+        df_pie = moto_df[moto_df["year_month"] == selected_month]
+    elif pie_source == "Fluid":
+        df_pie = fluid_df[fluid_df["year_month"] == selected_month]
     else:
-        df_pie = pd.concat([pads_df, disc_df], ignore_index=True)
+        df_pie = pd.concat([pads_df, disc_df, moto_df, fluid_df], ignore_index=True)
         df_pie = df_pie[df_pie["year_month"] == selected_month]
 
     pie_df = df_pie.groupby("category", as_index=False)["Inventory value"].sum()
@@ -1935,6 +1953,10 @@ def update_dio_inventory_chart(start_date, end_date, category):
             return df[s.str.startswith("2000")]
         elif category == "Disc":
             return df[s.str.startswith(("2330","2300"))]
+        elif category == "Moto":
+            return df[df["Cost center"].isin(["34N00037","34N00039"])]
+        elif category == "Fluid":
+            return df[(s.str.startswith("L"))&(df["Cost center"].isin(["34N00001"]))]
         elif category == "Total Inventory":
             return df
         return df
@@ -2149,12 +2171,17 @@ def update_tab_button_style(sales_clicks, cost_clicks):
     Input("normal-source-selector", "value")
 )
 def update_normal_coverage(selected_month, selected_source):
+    #global moto_df, fluid_df
     if not selected_month:
         return html.Div("")
     if selected_source == "Pads":
         df = pads_df
     elif selected_source == "Disc":
         df = disc_df
+    elif selected_source == "Moto":
+        df = moto_df
+    elif selected_source == "Fluid":
+        df = fluid_df
     else:
         df = pd.concat([pads_df,disc_df],ignore_index=True)
     df = df[
@@ -2247,7 +2274,7 @@ def update_normal_coverage(selected_month, selected_source):
     ]
 )
 def update_pie_figure(selected_month, selected_category):
-    global inventory_df, pads_df, disc_df
+    global inventory_df, pads_df, disc_df,moto_df,fluid_df
 
     if not selected_month or inventory_df.empty:
         return go.Figure()
@@ -2256,6 +2283,10 @@ def update_pie_figure(selected_month, selected_category):
         df = pads_df[pads_df['year_month'] == selected_month]
     elif selected_category == 'Disc':
         df = disc_df[disc_df['year_month'] == selected_month]
+    elif selected_category == 'Moto':
+        df = moto_df[moto_df['year_month'] == selected_month]
+    elif selected_category == 'Fluid':
+        df = fluid_df[fluid_df['year_month'] == selected_month]
     else:  # Total
         df = pd.concat([pads_df, disc_df], ignore_index=True)
         df = df[df['year_month'] == selected_month]
