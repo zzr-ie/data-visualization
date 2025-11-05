@@ -1990,10 +1990,25 @@ def update_dio_inventory_chart(start_date, end_date, category):
         sales_df["year_month"] = sales_df["Date"].dt.strftime('%Y-%m')
         sales_monthly = sales_df.groupby("year_month")["Net Sales"].sum().reset_index()
 
-    else:
-        inv_df = filter_by_category(inventory_df.copy(), "Item group", category)
-        inv_df = inv_df[inv_df["Cost center"] == "34N00001"]
-        sales_df = filter_by_category(df_store.copy(), "Item - Item Group Full Name", category)
+else:
+    # 类1: Cost center 为 "3N00001" 且 Item Group 为 "2000"
+    inv_df_class1 = inv_df[(inv_df["Cost center"] == "3N00001") & (inv_df["Item Group"] == "2000")]
+
+    # 类2: Cost center 为 "34N00001" 且 Item number 开头为 "L"
+    inv_df_class2 = inv_df[(inv_df["Cost center"] == "34N00001") & inv_df["Item number"].str.startswith("L")]
+
+    # 类3: Cost center 为 "3N00001" 且 Item Group 为 "2300" 或 "2330"
+    inv_df_class3 = inv_df[(inv_df["Cost center"] == "3N00001") & (inv_df["Item Group"].isin(["2300", "2330"]))]
+
+    # 类4: Cost center 为 "34N00037" 或 "34N00039"
+    inv_df_class4 = inv_df[inv_df["Cost center"].isin(["34N00037", "34N00039"])]
+
+    # 合并所有类的数据
+    inv_df = pd.concat([inv_df_class1, inv_df_class2, inv_df_class3, inv_df_class4])
+
+    # 继续筛选销售数据，条件为 "Item - Item Group Full Name" 等于 category
+    sales_df = filter_by_category(df_store.copy(), "Item - Item Group Full Name", category)
+
 
         summary_df = inv_df.groupby("year_month").agg({
             "On-hand": "sum",
@@ -2124,6 +2139,7 @@ def update_dio_inventory_chart(start_date, end_date, category):
         )
     )
 
+    
     return fig
 
 
@@ -2327,4 +2343,5 @@ def update_pie_figure(selected_month, selected_category):
 # ========== Run ==========
 if __name__ == '__main__':
     app.run(debug=True)
+
 
