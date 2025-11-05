@@ -11,17 +11,14 @@ from dash import MATCH
 import math
 import numpy as np
 from millify import millify
-
     # --- Defensive normalization: many inventory files use slightly different column names
     # Normalize common column names so later code (which expects 'On-hand', 'Inventory value',
     # 'Item number', 'Cost center', 'year_month') works reliably.
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
-
-app.config.suppress_callback_exceptions = True
-
 from dash import html, dcc, callback_context, Output, Input
 import dash
-
+app.config.suppress_callback_exceptions = True
 
 def get_evenly_spaced_labels(series, count=6):
     n = len(series)
@@ -260,7 +257,9 @@ def cost_page_layout():
                 options=[
                     {"label": "Total Inventory", "value": "Total Inventory"},
                     {"label": "Pads", "value": "Pads"},
-                    {"label": "Disc", "value": "Disc"}
+                    {"label": "Disc", "value": "Disc"},
+                    {"label": "Moto", "value": "Moto"},
+                    {"label": "Fluid", "value": "Fluid"}
                 ],
                 value="Total Inventory"
             )
