@@ -1952,18 +1952,43 @@ def update_dio_inventory_chart(start_date, end_date, category):
     if inventory_df.empty or df_store.empty:
         return go.Figure()
 
-    def filter_by_category(df, col, category):
-        s = df[col].astype(str)
-        if category == "Pads":
-            return df[s.str.startswith("2000")]
-        elif category == "Disc":
-            return df[s.str.startswith(("2330","2300"))]
-        elif category == "Moto":
-            return df[df["Cost center"].isin(["34N00037","34N00039"])]
-        elif category == "Fluid":
-            return df[(s.str.startswith("L"))&(df["Cost center"].isin(["34N00001"]))]
-        elif category == "Total Inventory":
+    def filter_by_category(df, category, is_inventory=True):
+        """
+        根据category筛选数据
+        is_inventory: 是否为库存数据（需要检查cost center）
+        """
+        if category == "Total Inventory":
             return df
+        
+        # 对于库存数据，先筛选cost center
+        if is_inventory and 'Cost center' in df.columns:
+            valid_cost_centers = ['34N00001', '34N00037', '34N00039']
+            df = df[df['Cost center'].isin(valid_cost_centers)]
+        
+        if category == "Fluid":
+            # 筛选L开头的Item number
+            if 'Item number' in df.columns:
+                df = df[df['Item number'].astype(str).str.startswith('L')]
+            elif 'Item - Number' in df.columns:  # 销售数据可能用不同的列名
+                df = df[df['Item - Number'].astype(str).str.startswith('L')]
+        elif category == "Disc":
+            # 筛选2300和2330的Item group
+            if 'Item group' in df.columns:
+                df = df[df['Item group'].astype(str).str.startswith(('2300', '2330'))]
+            elif 'Item - Item Group Full Name' in df.columns:
+                df = df[df['Item - Item Group Full Name'].astype(str).str.startswith(('2300', '2330'))]
+        elif category == "Pads":
+            # 筛选2000的Item group
+            if 'Item group' in df.columns:
+                df = df[df['Item group'].astype(str).str.startswith('2000')]
+            elif 'Item - Item Group Full Name' in df.columns:
+                df = df[df['Item - Item Group Full Name'].astype(str).str.startswith('2000')]
+        elif category == "Moto":
+            # 筛选Moto相关的cost center
+            if is_inventory and 'Cost center' in df.columns:
+                moto_cost_centers = ['34N00037', '34N00039']
+                df = df[df['Cost center'].isin(moto_cost_centers)]
+        
         return df
 
     # ==== 数据准备 ====
@@ -1974,13 +1999,15 @@ def update_dio_inventory_chart(start_date, end_date, category):
         bal_filtered = balance_df[
             (balance_df["year_month"] >= start_date) &
             (balance_df["year_month"] <= end_date)
-            ].copy()
+        ].copy()
 
         summary_df = bal_filtered[["year_month", "1400-INVENTORY"]].copy()
         summary_df = summary_df.rename(columns={"1400-INVENTORY": "Inventory value"})
         summary_df = summary_df.sort_values("year_month")
 
-        qty_df = inventory_df.groupby("year_month")["On-hand"].sum().reset_index()
+        # 对库存数量也应用cost center筛选
+        qty_df = filter_by_category(inventory_df.copy(), "Total Inventory", is_inventory=True)
+        qty_df = qty_df.groupby("year_month")["On-hand"].sum().reset_index()
         qty_df = qty_df[qty_df["year_month"].between(start_date, end_date)]
 
         summary_df = pd.merge(summary_df, qty_df, on="year_month", how="left")
@@ -1991,26 +2018,32 @@ def update_dio_inventory_chart(start_date, end_date, category):
         sales_monthly = sales_df.groupby("year_month")["Net Sales"].sum().reset_index()
 
     else:
-    # 筛选库存数据，条件为 "Item group" 等于 category
-    inv_df = filter_by_category(inventory_df.copy(), "Item group", category)
-    
-    # 将 Cost center 条件调整为选择 "34N00001", "34N00037", "34N00039"
-    inv_df = inv_df[inv_df["Cost center"].isin(["34N00001", "34N00037", "34N00039"])]
-    
-    # 筛选销售数据，条件为 "Item - Item Group Full Name" 等于 category
-    sales_df = filter_by_category(df_store.copy(), "Item - Item Group Full Name", category)
+        # 应用新的筛选逻辑
+        inv_df = filter_by_category(inventory_df.copy(), category, is_inventory=True)
+        sales_df = filter_by_category(df_store.copy(), category, is_inventory=False)
 
-
+        # 处理销售数据的时间字段
+        sales_df = sales_df.copy()
+        sales_df["Date"] = pd.to_datetime(sales_df["Date"], errors="coerce")
+        sales_df["year_month"] = sales_df["Date"].dt.strftime('%Y-%m')
+        
+        # 按月份聚合数据
         summary_df = inv_df.groupby("year_month").agg({
             "On-hand": "sum",
             "Inventory value": "sum"
         }).reset_index().sort_values("year_month")
+        
+        # 筛选时间范围
+        summary_df = summary_df[summary_df["year_month"].between(start_date, end_date)]
+        
+        # 获取销售数据
+        sales_monthly = sales_df.groupby("year_month")["Net Sales"].sum().reset_index()
 
-    sales_df["Date"] = pd.to_datetime(sales_df["Date"], errors="coerce")
-    sales_df["year_month"] = sales_df["Date"].dt.strftime('%Y-%m')
-    sales_monthly = sales_df.groupby("year_month")["Net Sales"].sum().reset_index()
-    sales_dict = sales_df.groupby("year_month")["Net Sales"].sum().to_dict()
-    summary_df = pd.merge(summary_df, sales_monthly, on="year_month", how="left")
+        sales_df["Date"] = pd.to_datetime(sales_df["Date"], errors="coerce")
+        sales_df["year_month"] = sales_df["Date"].dt.strftime('%Y-%m')
+        sales_monthly = sales_df.groupby("year_month")["Net Sales"].sum().reset_index()
+        sales_dict = sales_df.groupby("year_month")["Net Sales"].sum().to_dict()
+        summary_df = pd.merge(summary_df, sales_monthly, on="year_month", how="left")
 
     # ==== 计算 DIO ====
     summary_df["DIO"] = None
@@ -2334,6 +2367,7 @@ def update_pie_figure(selected_month, selected_category):
 # ========== Run ==========
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 
